@@ -31,9 +31,9 @@ const client = new Anthropic({
 // ÖFFENTLICHE ROUTEN (Kunden)
 // ──────────────────────────────────────────
 
-// Chat-Interface aufrufen
+// Chat-Interface aufrufen (via express.static → public/chat/index.html)
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../public/chat/index.html'));
+  res.sendFile(path.join(__dirname, '../public/chat/index.html'));
 });
 
 // Trainer-Info abrufen (für Kunden-UI)
