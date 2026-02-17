@@ -1,24 +1,52 @@
 import express from 'express';
 import cors from 'cors';
+import session from 'express-session';
+import path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import { TRAINERS } from './trainers';
+import { buildKnowledgePrompt } from './knowledge';
+import adminRouter from './admin/routes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, '../../public')));
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'pawcoach-secret-2024',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 8 * 60 * 60 * 1000 }, // 8 Stunden
+}));
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'PawCoach API' });
+// ──────────────────────────────────────────
+// ÖFFENTLICHE ROUTEN (Kunden)
+// ──────────────────────────────────────────
+
+// Chat-Interface aufrufen
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../public/chat/index.html'));
 });
 
-// Chat endpoint
+// Verfügbare Trainer abrufen (ohne System Prompts!)
+app.get('/api/trainers', (req, res) => {
+  const trainers = TRAINERS.map(t => ({
+    id: t.id,
+    name: t.name,
+    specialty: t.specialty,
+  }));
+  res.json(trainers);
+});
+
+// Chat-Endpunkt mit SSE-Streaming
 app.post('/api/chat', async (req, res) => {
   const { message, history, trainerId } = req.body;
 
@@ -28,8 +56,12 @@ app.post('/api/chat', async (req, res) => {
 
   const trainer = TRAINERS.find(t => t.id === trainerId);
   if (!trainer) {
-    return res.status(404).json({ error: `Trainer ${trainerId} nicht gefunden` });
+    return res.status(404).json({ error: `Trainer "${trainerId}" nicht gefunden` });
   }
+
+  // System Prompt = Trainer-Basis + Wissen aus dem Admin-Panel
+  const knowledgeAddendum = buildKnowledgePrompt(trainerId);
+  const systemPrompt = trainer.systemPrompt + knowledgeAddendum;
 
   const messages = [
     ...(history || []).map((msg: { role: string; content: string }) => ({
@@ -39,7 +71,7 @@ app.post('/api/chat', async (req, res) => {
     { role: 'user' as const, content: message },
   ];
 
-  // Streaming-Antwort
+  // Streaming via Server-Sent Events
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -48,7 +80,7 @@ app.post('/api/chat', async (req, res) => {
     const stream = client.messages.stream({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
-      system: trainer.systemPrompt,
+      system: systemPrompt,
       messages,
     });
 
@@ -61,10 +93,27 @@ app.post('/api/chat', async (req, res) => {
     res.end();
   } catch (error) {
     console.error('Claude API Fehler:', error);
-    res.status(500).json({ error: 'Interner Serverfehler' });
+    res.write(`data: ${JSON.stringify({ error: 'Interner Fehler' })}\n\n`);
+    res.end();
   }
 });
 
+// ──────────────────────────────────────────
+// ADMIN ROUTEN (Trainer-Login)
+// ──────────────────────────────────────────
+app.use('/admin', adminRouter);
+
+// Health Check
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'PawCoach API',
+    trainers: TRAINERS.map(t => t.name),
+  });
+});
+
 app.listen(PORT, () => {
-  console.log(`🐾 PawCoach Backend läuft auf Port ${PORT}`);
+  console.log(`🐾 PawCoach läuft auf http://localhost:${PORT}`);
+  console.log(`   Chat:  http://localhost:${PORT}/`);
+  console.log(`   Admin: http://localhost:${PORT}/admin/login`);
 });

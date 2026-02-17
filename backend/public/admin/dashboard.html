@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PawCoach Admin – Wissens-Verwaltung</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: 240px;
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 0;
+    }
+    .sidebar-logo {
+      padding: 0 20px 24px;
+      border-bottom: 1px solid #30363d;
+    }
+    .sidebar-logo span { font-size: 28px; }
+    .sidebar-logo h1 { font-size: 18px; font-weight: 700; margin-top: 4px; }
+    .sidebar-logo p { font-size: 11px; color: #8b949e; margin-top: 2px; }
+    .trainer-nav { padding: 16px 12px; flex: 1; }
+    .trainer-nav-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8b949e;
+      padding: 0 8px;
+      margin-bottom: 8px;
+    }
+    .trainer-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: none;
+      background: none;
+      color: #e6edf3;
+      width: 100%;
+      text-align: left;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .trainer-btn:hover { background: #21262d; }
+    .trainer-btn.active { background: #1f6feb22; color: #58a6ff; border: 1px solid #1f6feb44; }
+    .trainer-btn .avatar { font-size: 20px; }
+    .trainer-btn .info .name { font-weight: 600; }
+    .trainer-btn .info .spec { font-size: 11px; color: #8b949e; }
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid #30363d;
+    }
+    .logout-btn {
+      display: block;
+      padding: 8px 12px;
+      background: #21262d;
+      color: #8b949e;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 12px;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .logout-btn:hover { background: #ff476722; color: #ff4757; }
+
+    /* Main Content */
+    .main {
+      margin-left: 240px;
+      padding: 32px;
+      min-height: 100vh;
+    }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .page-header h2 { font-size: 22px; font-weight: 700; }
+    .page-header p { color: #8b949e; font-size: 13px; margin-top: 4px; }
+    .badge {
+      background: #1f6feb;
+      color: #fff;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    /* Add Knowledge Form */
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 200px 1fr auto;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    label { display: block; color: #8b949e; font-size: 11px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    select, textarea, input[type="text"] {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    select:focus, textarea:focus, input:focus { border-color: #4caf50; }
+    textarea { min-height: 80px; resize: vertical; }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-green { background: #238636; color: #fff; }
+    .btn-green:hover { background: #2ea043; }
+    .btn-red { background: transparent; color: #ff4757; border: 1px solid #ff475740; font-size: 12px; padding: 5px 10px; }
+    .btn-red:hover { background: #ff475715; }
+
+    /* Knowledge List */
+    .knowledge-list { display: flex; flex-direction: column; gap: 8px; }
+    .knowledge-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .knowledge-item:hover { border-color: #30363d; }
+    .knowledge-item-category {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #58a6ff;
+      background: #1f6feb22;
+      border: 1px solid #1f6feb44;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+    .knowledge-item-content { flex: 1; font-size: 14px; color: #e6edf3; line-height: 1.6; }
+    .knowledge-item-date { font-size: 11px; color: #8b949e; white-space: nowrap; margin-top: 4px; }
+    .empty-state { text-align: center; padding: 48px; color: #8b949e; }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #238636;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: #da3633; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+    .stat-card .stat-value { font-size: 28px; font-weight: 700; color: #4caf50; }
+    .stat-card .stat-label { font-size: 12px; color: #8b949e; margin-top: 4px; }
+
+    .category-colors {
+      'Methoden': '#1f6feb',
+      'Erfahrungen': '#3fb950',
+      'Häufige Fälle': '#d29922',
+      'Verbotenes': '#f85149',
+      'Phrasen': '#bc8cff',
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <span>🐾</span>
+    <h1>PawCoach</h1>
+    <p>Admin Dashboard</p>
+  </div>
+  <div class="trainer-nav">
+    <p class="trainer-nav-label">Trainer</p>
+    <div id="trainerNav"></div>
+  </div>
+  <div class="sidebar-footer">
+    <a href="/admin/logout" class="logout-btn">⬅ Ausloggen</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-header">
+    <div>
+      <h2 id="pageTitle">Trainer auswählen</h2>
+      <p id="pageSubtitle">Wähle links einen Trainer aus</p>
+    </div>
+    <span class="badge" id="entryCount">0 Einträge</span>
+  </div>
+
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Wissens-Einträge gesamt</div></div>
+    <div class="stat-card"><div class="stat-value" id="statCategories">0</div><div class="stat-label">Kategorien</div></div>
+    <div class="stat-card"><div class="stat-value" id="statWords">0</div><div class="stat-label">Wörter im Wissen</div></div>
+  </div>
+
+  <!-- Neues Wissen hinzufügen -->
+  <div class="card" id="addCard" style="display:none">
+    <h3>✍️ Neues Wissen einfügen</h3>
+    <div style="margin-bottom:12px">
+      <label>Kategorie</label>
+      <select id="categorySelect">
+        <option value="Methoden">🔧 Methoden & Techniken</option>
+        <option value="Erfahrungen">💡 Erfahrungen aus der Praxis</option>
+        <option value="Häufige Fälle">🐕 Häufige Fälle & Lösungen</option>
+        <option value="Phrasen">💬 Typische Aussagen & Phrasen</option>
+        <option value="Persönlichkeit">🧠 Persönlichkeit & Stil</option>
+        <option value="Verbotenes">🚫 Was ich nie empfehle</option>
+      </select>
+    </div>
+    <div style="margin-bottom:16px">
+      <label>Dein Wissen / Gedanke</label>
+      <textarea id="contentInput" placeholder="Schreib hier alles rein was du über diese Kategorie weißt. Der KI-Trainer wird das abrufen bevor er einem Kunden antwortet.
+
+Beispiel: 'Wenn ein Hund bellt, empfehle ich immer zuerst die Situation zu analysieren. Ist es Langeweile? Territorialverhalten? Die Lösung ist immer unterschiedlich...'"></textarea>
+    </div>
+    <button class="btn btn-green" onclick="addEntry()">+ Eintrag speichern</button>
+  </div>
+
+  <!-- Wissens-Liste -->
+  <div class="card" id="listCard" style="display:none">
+    <h3>📚 Gespeichertes Wissen</h3>
+    <div class="knowledge-list" id="knowledgeList">
+      <div class="empty-state">
+        <div class="icon">🧠</div>
+        <p>Noch kein Wissen gespeichert.<br>Füge oben deinen ersten Eintrag hinzu!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentTrainerId = null;
+  let trainers = [];
+
+  // Trainer laden
+  fetch('/admin/api/trainers')
+    .then(r => r.json())
+    .then(data => {
+      trainers = data;
+      const nav = document.getElementById('trainerNav');
+      const avatars = { trainer_1: '🐕', trainer_2: '🐩' };
+      data.forEach(t => {
+        const btn = document.createElement('button');
+        btn.className = 'trainer-btn';
+        btn.dataset.id = t.id;
+        btn.innerHTML = `
+          <span class="avatar">${avatars[t.id] || '🐾'}</span>
+          <div class="info">
+            <div class="name">${t.name}</div>
+            <div class="spec">${t.specialty}</div>
+          </div>`;
+        btn.onclick = () => selectTrainer(t);
+        nav.appendChild(btn);
+      });
+    });
+
+  function selectTrainer(trainer) {
+    currentTrainerId = trainer.id;
+    document.querySelectorAll('.trainer-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-id="${trainer.id}"]`)?.classList.add('active');
+    document.getElementById('pageTitle').textContent = trainer.name;
+    document.getElementById('pageSubtitle').textContent = trainer.specialty;
+    document.getElementById('addCard').style.display = 'block';
+    document.getElementById('listCard').style.display = 'block';
+    document.getElementById('statsRow').style.display = 'grid';
+    loadKnowledge();
+  }
+
+  function loadKnowledge() {
+    fetch(`/admin/api/knowledge/${currentTrainerId}`)
+      .then(r => r.json())
+      .then(entries => {
+        updateStats(entries);
+        renderList(entries);
+      });
+  }
+
+  function updateStats(entries) {
+    document.getElementById('entryCount').textContent = `${entries.length} Einträge`;
+    document.getElementById('statTotal').textContent = entries.length;
+    const cats = new Set(entries.map(e => e.category)).size;
+    document.getElementById('statCategories').textContent = cats;
+    const words = entries.reduce((sum, e) => sum + e.content.split(' ').length, 0);
+    document.getElementById('statWords').textContent = words;
+  }
+
+  function renderList(entries) {
+    const list = document.getElementById('knowledgeList');
+    if (entries.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">🧠</div><p>Noch kein Wissen gespeichert.<br>Füge oben deinen ersten Eintrag hinzu!</p></div>`;
+      return;
+    }
+    list.innerHTML = entries.map((e, i) => `
+      <div class="knowledge-item">
+        <span class="knowledge-item-category">${e.category}</span>
+        <div style="flex:1">
+          <div class="knowledge-item-content">${e.content}</div>
+          <div class="knowledge-item-date">${new Date(e.addedAt).toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
+        </div>
+        <button class="btn btn-red" onclick="deleteEntry(${i})">Löschen</button>
+      </div>`).join('');
+  }
+
+  function addEntry() {
+    const category = document.getElementById('categorySelect').value;
+    const content = document.getElementById('contentInput').value.trim();
+    if (!content || content.length < 10) {
+      showToast('Bitte mindestens 10 Zeichen eingeben.', true);
+      return;
+    }
+    fetch(`/admin/api/knowledge/${currentTrainerId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, content }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('contentInput').value = '';
+        showToast('✓ Wissen gespeichert!');
+        loadKnowledge();
+      }
+    });
+  }
+
+  function deleteEntry(index) {
+    if (!confirm('Diesen Eintrag wirklich löschen?')) return;
+    fetch(`/admin/api/knowledge/${currentTrainerId}/${index}`, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(() => { showToast('Eintrag gelöscht.'); loadKnowledge(); });
+  }
+
+  function showToast(msg, error = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (error ? ' error' : '');
+    setTimeout(() => t.className = 'toast', 2500);
+  }
+
+  // Enter in Textarea = kein Submit
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) addEntry();
+  });
+</script>
+</body>
+</html>
