@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PawCoach – Prompt Builder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+      background: #161b22; border-right: 1px solid #30363d;
+      display: flex; flex-direction: column; padding: 20px 0;
+    }
+    .sidebar-logo { padding: 0 16px 20px; border-bottom: 1px solid #30363d; }
+    .sidebar-logo span { font-size: 24px; }
+    .sidebar-logo h1 { font-size: 16px; font-weight: 700; margin-top: 4px; }
+    .nav { padding: 12px 8px; }
+    .nav a {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px; border-radius: 8px; text-decoration: none;
+      color: #8b949e; font-size: 13px; margin-bottom: 2px; transition: all 0.15s;
+    }
+    .nav a:hover { background: #21262d; color: #e6edf3; }
+    .nav a.active { background: #6e40c922; color: #bc8cff; }
+    .nav a .icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid #30363d; }
+    .logout { display: block; padding: 8px; background: #21262d; color: #8b949e;
+      text-decoration: none; border-radius: 6px; font-size: 12px; text-align: center; }
+    .logout:hover { color: #ff4757; }
+
+    /* Main */
+    .main { margin-left: 220px; padding: 28px 32px; }
+
+    .page-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .page-sub { color: #8b949e; font-size: 13px; margin-bottom: 24px; }
+
+    /* Trainer Tabs */
+    .trainer-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+    .trainer-tab {
+      display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+      border-radius: 8px; cursor: pointer; border: 1.5px solid #30363d;
+      background: transparent; color: #8b949e; font-size: 13px; transition: all 0.2s;
+    }
+    .trainer-tab:hover { background: #21262d; color: #e6edf3; }
+    .trainer-tab.active { border-color: #bc8cff; color: #bc8cff; background: #6e40c922; font-weight: 600; }
+    .trainer-tab .status-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #30363d;
+    }
+    .trainer-tab .status-dot.ready { background: #3fb950; }
+
+    /* Two-column layout */
+    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 1100px) { .columns { grid-template-columns: 1fr; } }
+
+    /* Cards */
+    .card {
+      background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 600; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px; color: #e6edf3;
+    }
+    .card-title .badge {
+      font-size: 10px; padding: 2px 8px; border-radius: 10px;
+      background: #6e40c922; color: #bc8cff; border: 1px solid #6e40c944;
+    }
+
+    /* Mode Selector */
+    .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .mode-card {
+      padding: 12px; border-radius: 8px; border: 1.5px solid #30363d;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .mode-card:hover { border-color: #8b949e; }
+    .mode-card.selected { border-color: #bc8cff; background: #6e40c922; }
+    .mode-card .mode-icon { font-size: 22px; margin-bottom: 6px; }
+    .mode-card .mode-name { font-size: 12px; font-weight: 600; color: #e6edf3; }
+    .mode-card .mode-desc { font-size: 11px; color: #8b949e; margin-top: 3px; line-height: 1.4; }
+
+    /* Textarea & Inputs */
+    textarea, input {
+      width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      color: #e6edf3; font-size: 14px; padding: 12px 14px; outline: none;
+      font-family: inherit; transition: border-color 0.2s; resize: vertical;
+    }
+    textarea:focus, input:focus { border-color: #bc8cff; }
+    label { display: block; font-size: 11px; color: #8b949e; margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.5px; }
+    .char-count { font-size: 11px; color: #8b949e; text-align: right; margin-top: 4px; }
+
+    /* Buttons */
+    .btn { padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.2s; }
+    .btn-purple { background: #6e40c9; color: #fff; }
+    .btn-purple:hover { background: #7c4ddb; }
+    .btn-purple:disabled { background: #30363d; color: #8b949e; cursor: not-allowed; }
+    .btn-green { background: #238636; color: #fff; }
+    .btn-green:hover { background: #2ea043; }
+    .btn-green:disabled { background: #30363d; color: #8b949e; cursor: not-allowed; }
+    .btn-ghost { background: transparent; color: #8b949e; border: 1px solid #30363d; }
+    .btn-ghost:hover { border-color: #8b949e; color: #e6edf3; }
+    .btn-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+    /* Prompt Preview */
+    .prompt-preview {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      padding: 14px; min-height: 200px; font-size: 13px; line-height: 1.8;
+      color: #d1d5db; white-space: pre-wrap; font-family: 'Courier New', monospace;
+      max-height: 420px; overflow-y: auto; position: relative;
+    }
+    .prompt-preview.editable {
+      outline: none; border-color: #bc8cff;
+    }
+    .prompt-preview-placeholder {
+      color: #8b949e; font-style: italic; font-family: inherit; font-size: 13px;
+    }
+
+    /* Streaming cursor */
+    .cursor {
+      display: inline-block; width: 2px; height: 14px;
+      background: #bc8cff; animation: blink 1s infinite; vertical-align: text-bottom;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* Status Banner */
+    .status-banner {
+      padding: 10px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+      display: none;
+    }
+    .status-banner.info { background: #1f6feb22; border: 1px solid #1f6feb44; color: #58a6ff; display: flex; gap: 8px; align-items: center; }
+    .status-banner.success { background: #23863622; border: 1px solid #2ea04344; color: #3fb950; display: flex; gap: 8px; align-items: center; }
+    .status-banner.error { background: #da363322; border: 1px solid #f8514944; color: #f85149; display: flex; gap: 8px; align-items: center; }
+
+    /* Divider with label */
+    .divider { display: flex; align-items: center; gap: 10px; margin: 20px 0; }
+    .divider::before, .divider::after { content:''; flex:1; height:1px; background:#30363d; }
+    .divider span { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+
+    /* Prompt quality indicator */
+    .quality-bar { margin-top: 10px; }
+    .quality-label { display: flex; justify-content: space-between; font-size: 11px; color: #8b949e; margin-bottom: 4px; }
+    .quality-track { height: 4px; background: #30363d; border-radius: 2px; }
+    .quality-fill { height: 100%; border-radius: 2px; transition: width 0.5s, background 0.5s; background: #30363d; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+      border-radius: 8px; font-size: 14px; font-weight: 600;
+      opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok { background: #238636; color: #fff; }
+    .toast.err { background: #da3633; color: #fff; }
+
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid transparent; border-top-color: currentColor;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <span>🐾</span>
+    <h1>PawCoach Admin</h1>
+  </div>
+  <nav class="nav">
+    <a href="/admin/dashboard"><span class="icon">📚</span> Wissens-Bank</a>
+    <a href="/admin/prompt-builder" class="active"><span class="icon">✨</span> Prompt Builder</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="/admin/logout" class="logout">⬅ Ausloggen</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-title">✨ Prompt Builder</div>
+  <p class="page-sub">Schreib frei drauf los – Claude verwandelt dein Wissen in einen perfekten KI-Trainer.</p>
+
+  <!-- Trainer Auswahl -->
+  <div class="trainer-tabs" id="trainerTabs"></div>
+
+  <div id="builderContent" style="display:none">
+    <div class="columns">
+
+      <!-- LINKE SPALTE: Input -->
+      <div>
+        <div class="card">
+          <div class="card-title">🎤 Dein Input <span class="badge">Schritt 1</span></div>
+
+          <!-- Modus Auswahl -->
+          <label>Wie möchtest du dein Wissen eingeben?</label>
+          <div class="mode-grid">
+            <div class="mode-card selected" data-mode="freestyle" onclick="selectMode(this)">
+              <div class="mode-icon">🌊</div>
+              <div class="mode-name">Freestyle</div>
+              <div class="mode-desc">Einfach drauflos schreiben was dir einfällt</div>
+            </div>
+            <div class="mode-card" data-mode="situations" onclick="selectMode(this)">
+              <div class="mode-icon">🎬</div>
+              <div class="mode-name">Situationen</div>
+              <div class="mode-desc">Typische Fälle aus deinem Alltag beschreiben</div>
+            </div>
+            <div class="mode-card" data-mode="interview" onclick="selectMode(this)">
+              <div class="mode-icon">🎙️</div>
+              <div class="mode-name">Interview</div>
+              <div class="mode-desc">Fragen & Antworten über dich als Trainer</div>
+            </div>
+          </div>
+
+          <div id="modeHint" style="font-size:12px;color:#8b949e;margin-bottom:10px;padding:8px 12px;background:#21262d;border-radius:6px;">
+            💡 Schreib alles was dir einfällt: deine Methoden, deine Philosophie, was du nie tun würdest, wie du mit Kunden redest, welche Sätze du oft sagst…
+          </div>
+
+          <label>Dein Wissen <span id="charCount" style="float:right;font-style:normal">0 Zeichen</span></label>
+          <textarea
+            id="inputText"
+            rows="14"
+            placeholder="Hier frei reinschreiben…
+
+Beispiel Freestyle:
+Ich bin seit 12 Jahren Hundetrainer. Ich schwöre auf positive Verstärkung – Strafen kommen bei mir nie in Frage. Wenn ein Hund springt sage ich immer: 'Ignorieren ist die stärkste Reaktion.' Mit Welpen starte ich immer mit dem Namen-Spiel...
+
+Beispiel Situation:
+Heute hatte ich eine Kundin mit einem 3-jährigen Labrador der an der Leine wie verrückt zog. Ich hab ihr erklärt dass der Hund nicht böse ist, er versteht die Regeln einfach noch nicht. Wir haben die Richtungswechsel-Methode geübt..."
+            oninput="updateChar()"
+          ></textarea>
+
+          <div class="btn-row">
+            <button class="btn btn-purple" id="buildBtn" onclick="buildPrompt()">
+              ✨ Prompt generieren
+            </button>
+            <button class="btn btn-ghost" onclick="clearInput()">Leeren</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECHTE SPALTE: Output -->
+      <div>
+        <div class="card">
+          <div class="card-title">🤖 Generierter System Prompt <span class="badge">Schritt 2</span></div>
+
+          <div class="status-banner" id="statusBanner"></div>
+
+          <div
+            id="promptOutput"
+            class="prompt-preview"
+            contenteditable="false"
+          ><span class="prompt-preview-placeholder">Der generierte System Prompt erscheint hier…<br><br>Du kannst ihn danach direkt bearbeiten bevor du speicherst.</span></div>
+
+          <div class="quality-bar" id="qualityBar" style="display:none">
+            <div class="quality-label">
+              <span>Prompt-Qualität</span>
+              <span id="qualityText">–</span>
+            </div>
+            <div class="quality-track">
+              <div class="quality-fill" id="qualityFill" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-green" id="saveBtn" onclick="savePrompt()" disabled>
+              💾 Als aktiven Prompt speichern
+            </button>
+            <button class="btn btn-ghost" id="editBtn" onclick="toggleEdit()" disabled>
+              ✏️ Bearbeiten
+            </button>
+          </div>
+        </div>
+
+        <div class="divider"><span>Aktuell gespeicherter Prompt</span></div>
+
+        <div class="card">
+          <div class="card-title">📄 Aktiver Prompt</div>
+          <div id="currentPrompt" class="prompt-preview" style="min-height:80px;font-size:12px">
+            <span class="prompt-preview-placeholder">Lade…</span>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn btn-ghost" style="font-size:12px" onclick="loadCurrentIntoEditor()">
+              ⬆️ Zum Bearbeiten laden
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let trainers = [];
+  let selectedTrainerId = null;
+  let currentMode = 'freestyle';
+  let isGenerating = false;
+  let generatedPrompt = '';
+  let isEditing = false;
+
+  const modeHints = {
+    freestyle: '💡 Schreib alles was dir einfällt: deine Methoden, Philosophie, was du nie tun würdest, wie du mit Kunden sprichst, welche Sätze du oft sagst…',
+    situations: '🎬 Beschreib 3–5 typische Situationen aus deiner Arbeit. Was war das Problem? Wie hast du reagiert? Was hast du dem Kunden erklärt?',
+    interview: '🎙️ Stell dir vor jemand interviewt dich. Schreib Frage + Antwort. z.B. "Was ist deine Trainingsphilosophie? – Ich glaube an…"',
+  };
+
+  // Trainer laden
+  fetch('/admin/api/trainers')
+    .then(r => r.json())
+    .then(data => {
+      trainers = data;
+      const tabs = document.getElementById('trainerTabs');
+      data.forEach((t, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'trainer-tab' + (i === 0 ? ' active' : '');
+        btn.dataset.id = t.id;
+        btn.innerHTML = `
+          <span>${t.avatar || '🐾'}</span>
+          <span>${t.name}</span>
+          <span class="status-dot ${t.hasCustomPrompt ? 'ready' : ''}" title="${t.hasCustomPrompt ? 'Prompt vorhanden' : 'Kein Prompt'}"></span>`;
+        btn.onclick = () => selectTrainer(t, btn);
+        tabs.appendChild(btn);
+      });
+      if (data.length > 0) selectTrainer(data[0], tabs.querySelector('.trainer-tab'));
+    });
+
+  function selectTrainer(trainer, btn) {
+    selectedTrainerId = trainer.id;
+    document.querySelectorAll('.trainer-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('builderContent').style.display = 'block';
+    resetOutput();
+    loadCurrentPrompt();
+  }
+
+  function selectMode(card) {
+    document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    currentMode = card.dataset.mode;
+    document.getElementById('modeHint').textContent = modeHints[currentMode];
+  }
+
+  function updateChar() {
+    const len = document.getElementById('inputText').value.length;
+    document.getElementById('charCount').textContent = len + ' Zeichen';
+  }
+
+  function clearInput() {
+    document.getElementById('inputText').value = '';
+    updateChar();
+  }
+
+  function resetOutput() {
+    generatedPrompt = '';
+    isEditing = false;
+    const out = document.getElementById('promptOutput');
+    out.innerHTML = '<span class="prompt-preview-placeholder">Der generierte System Prompt erscheint hier…</span>';
+    out.contentEditable = 'false';
+    out.classList.remove('editable');
+    document.getElementById('saveBtn').disabled = true;
+    document.getElementById('editBtn').disabled = true;
+    document.getElementById('editBtn').textContent = '✏️ Bearbeiten';
+    document.getElementById('qualityBar').style.display = 'none';
+    setStatus('', '');
+  }
+
+  function setStatus(type, msg) {
+    const el = document.getElementById('statusBanner');
+    if (!type) { el.style.display = 'none'; return; }
+    const icons = { info: '⏳', success: '✅', error: '❌' };
+    el.className = `status-banner ${type}`;
+    el.style.display = 'flex';
+    el.innerHTML = `<span>${icons[type]}</span> ${msg}`;
+  }
+
+  async function buildPrompt() {
+    const input = document.getElementById('inputText').value.trim();
+    if (input.length < 30) { showToast('Bitte mehr Text eingeben (min. 30 Zeichen)', true); return; }
+    if (isGenerating) return;
+
+    isGenerating = true;
+    generatedPrompt = '';
+    resetOutput();
+    document.getElementById('buildBtn').disabled = true;
+    document.getElementById('buildBtn').innerHTML = '<span class="spinner"></span> Generiere…';
+    setStatus('info', 'Claude analysiert dein Wissen und baut den System Prompt…');
+
+    const out = document.getElementById('promptOutput');
+    out.innerHTML = '';
+
+    try {
+      const response = await fetch('/admin/api/build-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trainerId: selectedTrainerId, input, mode: currentMode }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Serverfehler');
+      }
+
+      const cursor = document.createElement('span');
+      cursor.className = 'cursor';
+      out.appendChild(cursor);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const lines = decoder.decode(value).split('\n');
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') break;
+          try {
+            const { text } = JSON.parse(data);
+            generatedPrompt += text;
+            cursor.remove();
+            out.textContent = generatedPrompt;
+            out.appendChild(cursor);
+          } catch {}
+        }
+      }
+      cursor.remove();
+
+      // Fertig
+      setStatus('success', 'Prompt erfolgreich generiert! Überprüfe ihn und speichere wenn du zufrieden bist.');
+      document.getElementById('saveBtn').disabled = false;
+      document.getElementById('editBtn').disabled = false;
+      updateQuality(generatedPrompt);
+
+    } catch (err) {
+      setStatus('error', 'Fehler: ' + (err instanceof Error ? err.message : 'Unbekannt'));
+      out.innerHTML = '<span class="prompt-preview-placeholder">Fehler beim Generieren. Bitte erneut versuchen.</span>';
+    } finally {
+      isGenerating = false;
+      document.getElementById('buildBtn').disabled = false;
+      document.getElementById('buildBtn').innerHTML = '✨ Prompt generieren';
+    }
+  }
+
+  function toggleEdit() {
+    const out = document.getElementById('promptOutput');
+    const btn = document.getElementById('editBtn');
+    isEditing = !isEditing;
+    if (isEditing) {
+      out.contentEditable = 'true';
+      out.classList.add('editable');
+      out.focus();
+      btn.textContent = '✅ Fertig bearbeiten';
+    } else {
+      generatedPrompt = out.textContent || '';
+      out.contentEditable = 'false';
+      out.classList.remove('editable');
+      btn.textContent = '✏️ Bearbeiten';
+      updateQuality(generatedPrompt);
+    }
+  }
+
+  function savePrompt() {
+    if (isEditing) {
+      generatedPrompt = document.getElementById('promptOutput').textContent || '';
+    }
+    if (!generatedPrompt.trim()) { showToast('Kein Prompt zum Speichern', true); return; }
+
+    fetch(`/admin/api/systemprompt/${selectedTrainerId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: generatedPrompt }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showToast('✅ Prompt gespeichert! Ab sofort aktiv für alle Kunden.');
+        loadCurrentPrompt();
+        // Status-Dot updaten
+        const tab = document.querySelector(`.trainer-tab[data-id="${selectedTrainerId}"] .status-dot`);
+        if (tab) tab.classList.add('ready');
+      } else {
+        showToast(data.error || 'Fehler beim Speichern', true);
+      }
+    });
+  }
+
+  function loadCurrentPrompt() {
+    const el = document.getElementById('currentPrompt');
+    el.innerHTML = '<span class="prompt-preview-placeholder">Lade…</span>';
+    fetch(`/admin/api/systemprompt/${selectedTrainerId}`)
+      .then(r => r.json())
+      .then(data => {
+        el.textContent = data.prompt || '(Kein Prompt gespeichert)';
+      });
+  }
+
+  function loadCurrentIntoEditor() {
+    const current = document.getElementById('currentPrompt').textContent;
+    if (!current || current === '(Kein Prompt gespeichert)') return;
+    generatedPrompt = current;
+    const out = document.getElementById('promptOutput');
+    out.textContent = current;
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('editBtn').disabled = false;
+    updateQuality(current);
+    setStatus('info', 'Aktueller Prompt geladen. Du kannst ihn jetzt bearbeiten oder neu generieren.');
+  }
+
+  function updateQuality(text) {
+    const bar = document.getElementById('qualityBar');
+    bar.style.display = 'block';
+    const words = text.split(/\s+/).length;
+    let score = Math.min(100, Math.round((words / 200) * 100));
+    let label = score < 30 ? 'Zu kurz' : score < 60 ? 'Gut' : score < 85 ? 'Sehr gut' : 'Excellent';
+    let color = score < 30 ? '#f85149' : score < 60 ? '#d29922' : score < 85 ? '#3fb950' : '#58a6ff';
+    document.getElementById('qualityFill').style.width = score + '%';
+    document.getElementById('qualityFill').style.background = color;
+    document.getElementById('qualityText').textContent = `${label} (${words} Wörter)`;
+    document.getElementById('qualityText').style.color = color;
+  }
+
+  function showToast(msg, err = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast show ${err ? 'err' : 'ok'}`;
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+</script>
+</body>
+</html>

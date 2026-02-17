@@ -3,7 +3,7 @@ import cors from 'cors';
 import session from 'express-session';
 import path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
-import { TRAINERS } from './trainers';
+import { getTrainers, getTrainer } from './trainers';
 import { buildKnowledgePrompt } from './knowledge';
 import adminRouter from './admin/routes';
 
@@ -38,10 +38,11 @@ app.get('/', (req, res) => {
 
 // Verfügbare Trainer abrufen (ohne System Prompts!)
 app.get('/api/trainers', (req, res) => {
-  const trainers = TRAINERS.map(t => ({
+  const trainers = getTrainers().map(t => ({
     id: t.id,
     name: t.name,
     specialty: t.specialty,
+    avatar: t.avatar,
   }));
   res.json(trainers);
 });
@@ -54,7 +55,7 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'message und trainerId sind erforderlich' });
   }
 
-  const trainer = TRAINERS.find(t => t.id === trainerId);
+  const trainer = getTrainer(trainerId);
   if (!trainer) {
     return res.status(404).json({ error: `Trainer "${trainerId}" nicht gefunden` });
   }
@@ -108,7 +109,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'PawCoach API',
-    trainers: TRAINERS.map(t => t.name),
+    trainers: getTrainers().map(t => t.name),
   });
 });
 
