@@ -14,19 +14,19 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Login
 router.get('/login', (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, '../../../public/admin/login.html'));
+  res.sendFile(path.join(__dirname, '../../public/admin/login.html'));
 });
 router.post('/login', handleLogin);
 router.get('/logout', handleLogout);
 
 // Dashboard
 router.get('/dashboard', requireAuth, (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, '../../../public/admin/dashboard.html'));
+  res.sendFile(path.join(__dirname, '../../public/admin/dashboard.html'));
 });
 
 // Prompt Builder
 router.get('/prompt-builder', requireAuth, (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, '../../../public/admin/prompt-builder.html'));
+  res.sendFile(path.join(__dirname, '../../public/admin/prompt-builder.html'));
 });
 
 // ── Trainer API ──────────────────────────────────────
