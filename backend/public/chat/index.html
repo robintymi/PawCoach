@@ -27,42 +27,18 @@
       gap: 12px;
       flex-shrink: 0;
     }
-    .topbar-logo { font-size: 24px; }
-    .topbar-title { font-size: 17px; font-weight: 700; color: #fff; }
-    .topbar-sub { font-size: 12px; color: #8e8ea0; margin-top: 1px; }
-
-    /* Trainer Picker */
-    .trainer-bar {
-      background: #2f2f2f;
-      border-bottom: 1px solid #3f3f3f;
-      padding: 8px 16px;
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      flex-shrink: 0;
+    .topbar-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #3f3f3f; display: flex; align-items: center;
+      justify-content: center; font-size: 20px;
     }
-    .trainer-chip {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
-      border-radius: 20px;
-      cursor: pointer;
-      border: 1.5px solid #3f3f3f;
-      background: transparent;
-      color: #ececec;
-      font-size: 13px;
-      white-space: nowrap;
-      transition: all 0.2s;
+    .topbar-info .topbar-name { font-size: 16px; font-weight: 700; color: #fff; }
+    .topbar-info .topbar-sub { font-size: 12px; color: #8e8ea0; }
+    .topbar-status {
+      margin-left: auto; display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #10a37f;
     }
-    .trainer-chip:hover { background: #3f3f3f; }
-    .trainer-chip.active {
-      background: #10a37f22;
-      border-color: #10a37f;
-      color: #10a37f;
-      font-weight: 600;
-    }
-    .trainer-chip .chip-avatar { font-size: 18px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10a37f; }
 
     /* Chat Area */
     .chat-area {
@@ -82,9 +58,10 @@
       text-align: center;
       padding: 32px;
     }
-    .welcome-icon { font-size: 56px; }
+    .welcome-avatar { font-size: 64px; }
     .welcome-title { font-size: 24px; font-weight: 700; }
-    .welcome-sub { color: #8e8ea0; font-size: 15px; max-width: 420px; line-height: 1.6; }
+    .welcome-name { font-size: 16px; color: #10a37f; font-weight: 600; }
+    .welcome-sub { color: #8e8ea0; font-size: 14px; max-width: 400px; line-height: 1.6; }
     .suggestion-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -109,7 +86,7 @@
 
     /* Messages */
     .message-wrapper {
-      max-width: 780px;
+      max-width: 760px;
       margin: 0 auto;
       padding: 0 24px;
     }
@@ -117,121 +94,54 @@
       display: flex;
       gap: 14px;
       padding: 16px 0;
-      border-bottom: 1px solid #2f2f2f;
+      border-bottom: 1px solid #2a2a2a;
     }
     .message:last-child { border-bottom: none; }
     .message-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      flex-shrink: 0;
-      margin-top: 2px;
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0; margin-top: 2px;
     }
-    .message.user .message-avatar {
-      background: #10a37f;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-    }
-    .message.assistant .message-avatar {
-      background: #2f2f2f;
-      border: 1px solid #3f3f3f;
-    }
+    .message.user .message-avatar { background: #10a37f; color: #fff; font-size: 13px; font-weight: 700; }
+    .message.assistant .message-avatar { background: #2f2f2f; border: 1px solid #3f3f3f; }
     .message-body { flex: 1; min-width: 0; }
-    .message-name {
-      font-size: 12px;
-      font-weight: 600;
-      color: #8e8ea0;
-      margin-bottom: 6px;
-    }
-    .message-content {
-      font-size: 15px;
-      line-height: 1.7;
-      color: #ececec;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    .message.assistant .message-content { color: #d1d5db; }
+    .message-name { font-size: 12px; font-weight: 600; color: #8e8ea0; margin-bottom: 6px; }
+    .message-content { font-size: 15px; line-height: 1.75; color: #d1d5db; white-space: pre-wrap; word-wrap: break-word; }
+    .message.user .message-content { color: #ececec; }
 
     /* Typing indicator */
-    .typing-indicator {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-      padding: 4px 0;
-    }
+    .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
     .typing-indicator span {
-      width: 7px;
-      height: 7px;
-      background: #8e8ea0;
-      border-radius: 50%;
-      animation: bounce 1.2s infinite;
+      width: 7px; height: 7px; background: #8e8ea0;
+      border-radius: 50%; animation: bounce 1.2s infinite;
     }
     .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
     .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce {
-      0%, 80%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-6px); }
-    }
+    @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
 
     /* Input Area */
-    .input-area {
-      background: #212121;
-      padding: 16px 24px 20px;
-      flex-shrink: 0;
-    }
+    .input-area { background: #212121; padding: 16px 24px 20px; flex-shrink: 0; }
     .input-wrapper {
-      max-width: 780px;
-      margin: 0 auto;
-      background: #2f2f2f;
-      border: 1px solid #3f3f3f;
-      border-radius: 14px;
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-      padding: 10px 12px 10px 16px;
+      max-width: 760px; margin: 0 auto;
+      background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 14px;
+      display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px 10px 16px;
       transition: border-color 0.2s;
     }
     .input-wrapper:focus-within { border-color: #10a37f; }
     textarea#msgInput {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: #ececec;
-      font-size: 15px;
-      font-family: inherit;
-      resize: none;
-      max-height: 160px;
-      min-height: 24px;
-      line-height: 1.6;
+      flex: 1; background: transparent; border: none; outline: none;
+      color: #ececec; font-size: 15px; font-family: inherit;
+      resize: none; max-height: 160px; min-height: 24px; line-height: 1.6;
     }
     textarea#msgInput::placeholder { color: #6e6e80; }
     .send-btn {
-      width: 36px;
-      height: 36px;
-      background: #10a37f;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      flex-shrink: 0;
+      width: 36px; height: 36px; background: #10a37f; border: none; border-radius: 8px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; flex-shrink: 0;
     }
     .send-btn:disabled { background: #3f3f3f; cursor: not-allowed; }
     .send-btn svg { width: 16px; height: 16px; fill: #fff; }
-    .input-hint {
-      text-align: center;
-      font-size: 11px;
-      color: #6e6e80;
-      margin-top: 8px;
-    }
+    .input-hint { text-align: center; font-size: 11px; color: #6e6e80; margin-top: 8px; }
 
     /* Scrollbar */
     .chat-area::-webkit-scrollbar { width: 6px; }
@@ -242,23 +152,26 @@
 <body>
 
 <div class="topbar">
-  <span class="topbar-logo">🐾</span>
-  <div>
-    <div class="topbar-title">PawCoach</div>
-    <div class="topbar-sub">KI-Hundetrainer</div>
+  <div class="topbar-avatar" id="topbarAvatar">🐕</div>
+  <div class="topbar-info">
+    <div class="topbar-name" id="topbarName">PawCoach</div>
+    <div class="topbar-sub" id="topbarSub">KI-Hundetrainer</div>
+  </div>
+  <div class="topbar-status">
+    <div class="status-dot"></div>
+    Online
   </div>
 </div>
 
-<div class="trainer-bar" id="trainerBar"></div>
-
 <div class="chat-area" id="chatArea">
   <div class="welcome-screen" id="welcomeScreen">
-    <div class="welcome-icon">🐕</div>
+    <div class="welcome-avatar" id="welcomeAvatar">🐕</div>
+    <div class="welcome-name" id="welcomeName">Lade…</div>
     <div class="welcome-title">Wie kann ich dir helfen?</div>
-    <div class="welcome-sub" id="welcomeSub">Wähle oben einen Trainer und stell deine erste Frage.</div>
+    <div class="welcome-sub" id="welcomeSub">Stell mir deine Frage zur Hundeerziehung!</div>
     <div class="suggestion-grid" id="suggestionGrid">
-      <button class="suggestion-btn" onclick="suggest(this)">Mein Hund zieht stark an der Leine. Was soll ich tun?</button>
-      <button class="suggestion-btn" onclick="suggest(this)">Wie trainiere ich meinen Welpen mit dem Clicker?</button>
+      <button class="suggestion-btn" onclick="suggest(this)">Mein Hund zieht stark an der Leine. Was tun?</button>
+      <button class="suggestion-btn" onclick="suggest(this)">Wie trainiere ich meinen Welpen mit Clicker?</button>
       <button class="suggestion-btn" onclick="suggest(this)">Mein Hund bellt ständig fremde Menschen an.</button>
       <button class="suggestion-btn" onclick="suggest(this)">Wie oft sollte ich meinen Hund täglich trainieren?</button>
     </div>
@@ -268,7 +181,7 @@
 
 <div class="input-area">
   <div class="input-wrapper">
-    <textarea id="msgInput" placeholder="Stell dem Trainer eine Frage..." rows="1"></textarea>
+    <textarea id="msgInput" placeholder="Stell deine Frage…" rows="1"></textarea>
     <button class="send-btn" id="sendBtn" disabled onclick="sendMessage()">
       <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
     </button>
@@ -277,40 +190,23 @@
 </div>
 
 <script>
-  let trainers = [];
-  let selectedTrainer = null;
+  let trainer = null;
   let history = [];
   let isLoading = false;
 
-  // Trainer laden
-  fetch('/api/trainers')
+  // Trainer-Info laden
+  fetch('/api/trainer')
     .then(r => r.json())
-    .then(data => {
-      trainers = data;
-      const bar = document.getElementById('trainerBar');
-      const avatars = { trainer_1: '🐕', trainer_2: '🐩' };
-      data.forEach((t, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'trainer-chip' + (i === 0 ? ' active' : '');
-        btn.dataset.id = t.id;
-        btn.innerHTML = `<span class="chip-avatar">${avatars[t.id] || '🐾'}</span>${t.name}`;
-        btn.onclick = () => selectTrainer(t, btn);
-        bar.appendChild(btn);
-      });
-      if (data.length > 0) selectTrainer(data[0], bar.querySelector('.trainer-chip'));
+    .then(t => {
+      trainer = t;
+      document.getElementById('topbarAvatar').textContent = t.avatar || '🐕';
+      document.getElementById('topbarName').textContent = t.name;
+      document.getElementById('topbarSub').textContent = t.specialty;
+      document.getElementById('welcomeAvatar').textContent = t.avatar || '🐕';
+      document.getElementById('welcomeName').textContent = t.name;
+      document.getElementById('welcomeSub').textContent =
+        `Hallo! Ich bin ${t.name}. Stell mir deine Fragen rund um Hundeerziehung!`;
     });
-
-  function selectTrainer(trainer, btn) {
-    selectedTrainer = trainer;
-    history = [];
-    document.querySelectorAll('.trainer-chip').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('welcomeSub').textContent =
-      `Du sprichst mit ${trainer.name} – ${trainer.specialty}. Stell deine Frage!`;
-    document.getElementById('welcomeScreen').style.display = 'flex';
-    document.getElementById('messageList').style.display = 'none';
-    document.getElementById('messageList').innerHTML = '';
-  }
 
   function suggest(btn) {
     document.getElementById('msgInput').value = btn.textContent;
@@ -318,7 +214,6 @@
     sendMessage();
   }
 
-  // Textarea auto-resize
   const textarea = document.getElementById('msgInput');
   function autoResize() {
     textarea.style.height = 'auto';
@@ -330,7 +225,7 @@
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
 
-  function appendMessage(role, content, trainerName, avatar) {
+  function appendMessage(role, content) {
     const list = document.getElementById('messageList');
     document.getElementById('welcomeScreen').style.display = 'none';
     list.style.display = 'block';
@@ -338,9 +233,9 @@
     const div = document.createElement('div');
     div.className = `message ${role}`;
     div.innerHTML = `
-      <div class="message-avatar">${role === 'user' ? 'Du' : (avatar || '🐾')}</div>
+      <div class="message-avatar">${role === 'user' ? 'Du' : (trainer?.avatar || '🐕')}</div>
       <div class="message-body">
-        <div class="message-name">${role === 'user' ? 'Du' : (trainerName || 'Trainer')}</div>
+        <div class="message-name">${role === 'user' ? 'Du' : (trainer?.name || 'Trainer')}</div>
         <div class="message-content"></div>
       </div>`;
     list.appendChild(div);
@@ -355,18 +250,17 @@
 
   async function sendMessage() {
     const text = textarea.value.trim();
-    if (!text || isLoading || !selectedTrainer) return;
+    if (!text || isLoading) return;
 
     isLoading = true;
     textarea.value = '';
     textarea.style.height = 'auto';
     document.getElementById('sendBtn').disabled = true;
 
-    appendMessage('user', text, 'Du', null);
+    appendMessage('user', text);
     history.push({ role: 'user', content: text });
 
-    const avatars = { trainer_1: '🐕', trainer_2: '🐩' };
-    const contentEl = appendMessage('assistant', '', selectedTrainer.name, avatars[selectedTrainer.id] || '🐾');
+    const contentEl = appendMessage('assistant', '');
     contentEl.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
 
     let fullText = '';
@@ -376,11 +270,7 @@
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          history: history.slice(-10),
-          trainerId: selectedTrainer.id,
-        }),
+        body: JSON.stringify({ message: text, history: history.slice(-10) }),
       });
 
       const reader = response.body.getReader();
@@ -403,7 +293,7 @@
           } catch {}
         }
       }
-    } catch (err) {
+    } catch {
       contentEl.textContent = 'Verbindungsfehler. Bitte versuche es erneut.';
     }
 

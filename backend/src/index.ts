@@ -3,7 +3,7 @@ import cors from 'cors';
 import session from 'express-session';
 import path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
-import { getTrainers, getTrainer } from './trainers';
+import { getTrainer } from './trainers';
 import { buildKnowledgePrompt } from './knowledge';
 import adminRouter from './admin/routes';
 
@@ -36,32 +36,22 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../../public/chat/index.html'));
 });
 
-// Verfügbare Trainer abrufen (ohne System Prompts!)
-app.get('/api/trainers', (req, res) => {
-  const trainers = getTrainers().map(t => ({
-    id: t.id,
-    name: t.name,
-    specialty: t.specialty,
-    avatar: t.avatar,
-  }));
-  res.json(trainers);
+// Trainer-Info abrufen (für Kunden-UI)
+app.get('/api/trainer', (req, res) => {
+  const { id, name, specialty, avatar } = getTrainer();
+  res.json({ id, name, specialty, avatar });
 });
 
 // Chat-Endpunkt mit SSE-Streaming
 app.post('/api/chat', async (req, res) => {
-  const { message, history, trainerId } = req.body;
+  const { message, history } = req.body;
 
-  if (!message || !trainerId) {
-    return res.status(400).json({ error: 'message und trainerId sind erforderlich' });
+  if (!message) {
+    return res.status(400).json({ error: 'message ist erforderlich' });
   }
 
-  const trainer = getTrainer(trainerId);
-  if (!trainer) {
-    return res.status(404).json({ error: `Trainer "${trainerId}" nicht gefunden` });
-  }
-
-  // System Prompt = Trainer-Basis + Wissen aus dem Admin-Panel
-  const knowledgeAddendum = buildKnowledgePrompt(trainerId);
+  const trainer = getTrainer();
+  const knowledgeAddendum = buildKnowledgePrompt(trainer.id);
   const systemPrompt = trainer.systemPrompt + knowledgeAddendum;
 
   const messages = [
@@ -109,7 +99,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'PawCoach API',
-    trainers: getTrainers().map(t => t.name),
+    trainer: getTrainer().name,
   });
 });
 

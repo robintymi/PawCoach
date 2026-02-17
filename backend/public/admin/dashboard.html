@@ -299,45 +299,26 @@ Beispiel: 'Wenn ein Hund bellt, empfehle ich immer zuerst die Situation zu analy
 <div class="toast" id="toast"></div>
 
 <script>
-  let currentTrainerId = null;
-  let trainers = [];
-
-  // Trainer laden
-  fetch('/admin/api/trainers')
+  // Trainer-Info laden und direkt anzeigen
+  fetch('/admin/api/trainer')
     .then(r => r.json())
-    .then(data => {
-      trainers = data;
+    .then(t => {
+      document.getElementById('pageTitle').textContent = t.name;
+      document.getElementById('pageSubtitle').textContent = t.specialty;
+      document.getElementById('addCard').style.display = 'block';
+      document.getElementById('listCard').style.display = 'block';
+      document.getElementById('statsRow').style.display = 'grid';
+      // Sidebar aktualisieren
       const nav = document.getElementById('trainerNav');
-      const avatars = { trainer_1: '🐕', trainer_2: '🐩' };
-      data.forEach(t => {
-        const btn = document.createElement('button');
-        btn.className = 'trainer-btn';
-        btn.dataset.id = t.id;
-        btn.innerHTML = `
-          <span class="avatar">${avatars[t.id] || '🐾'}</span>
-          <div class="info">
-            <div class="name">${t.name}</div>
-            <div class="spec">${t.specialty}</div>
-          </div>`;
-        btn.onclick = () => selectTrainer(t);
-        nav.appendChild(btn);
-      });
+      nav.innerHTML = `<div style="padding:8px 12px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:22px">${t.avatar}</span>
+        <div><div style="font-size:13px;font-weight:600;color:#e6edf3">${t.name}</div>
+        <div style="font-size:11px;color:#8b949e">${t.specialty}</div></div></div>`;
+      loadKnowledge();
     });
 
-  function selectTrainer(trainer) {
-    currentTrainerId = trainer.id;
-    document.querySelectorAll('.trainer-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector(`[data-id="${trainer.id}"]`)?.classList.add('active');
-    document.getElementById('pageTitle').textContent = trainer.name;
-    document.getElementById('pageSubtitle').textContent = trainer.specialty;
-    document.getElementById('addCard').style.display = 'block';
-    document.getElementById('listCard').style.display = 'block';
-    document.getElementById('statsRow').style.display = 'grid';
-    loadKnowledge();
-  }
-
   function loadKnowledge() {
-    fetch(`/admin/api/knowledge/${currentTrainerId}`)
+    fetch('/admin/api/knowledge')
       .then(r => r.json())
       .then(entries => {
         updateStats(entries);
@@ -378,7 +359,7 @@ Beispiel: 'Wenn ein Hund bellt, empfehle ich immer zuerst die Situation zu analy
       showToast('Bitte mindestens 10 Zeichen eingeben.', true);
       return;
     }
-    fetch(`/admin/api/knowledge/${currentTrainerId}`, {
+    fetch('/admin/api/knowledge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ category, content }),
@@ -395,7 +376,7 @@ Beispiel: 'Wenn ein Hund bellt, empfehle ich immer zuerst die Situation zu analy
 
   function deleteEntry(index) {
     if (!confirm('Diesen Eintrag wirklich löschen?')) return;
-    fetch(`/admin/api/knowledge/${currentTrainerId}/${index}`, { method: 'DELETE' })
+    fetch(`/admin/api/knowledge/${index}`, { method: 'DELETE' })
       .then(r => r.json())
       .then(() => { showToast('Eintrag gelöscht.'); loadKnowledge(); });
   }

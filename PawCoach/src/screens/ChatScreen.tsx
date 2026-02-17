@@ -11,38 +11,24 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { Message, Trainer } from '../types';
-import { TRAINERS, getWelcomeMessage } from '../constants/trainers';
+import { Message } from '../types';
+import { TRAINER, getWelcomeMessage } from '../constants/trainers';
 import { sendMessageToClaude } from '../services/claudeApi';
 import ChatBubble from '../components/ChatBubble';
-import TrainerSelector from '../components/TrainerSelector';
 import TypingIndicator from '../components/TypingIndicator';
 
 const ChatScreen: React.FC = () => {
-  const [selectedTrainer, setSelectedTrainer] = useState<Trainer>(TRAINERS[0]);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
       role: 'assistant',
-      content: getWelcomeMessage(TRAINERS[0]),
+      content: getWelcomeMessage(),
       timestamp: new Date(),
     },
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-
-  const handleTrainerChange = useCallback((trainer: Trainer) => {
-    setSelectedTrainer(trainer);
-    setMessages([
-      {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: getWelcomeMessage(trainer),
-        timestamp: new Date(),
-      },
-    ]);
-  }, []);
 
   const handleSend = useCallback(async () => {
     const text = inputText.trim();
@@ -59,14 +45,12 @@ const ChatScreen: React.FC = () => {
     setInputText('');
     setIsLoading(true);
 
-    // Platzhalter für die Antwort (Streaming)
     const assistantMessageId = (Date.now() + 1).toString();
     const assistantMessage: Message = {
       id: assistantMessageId,
       role: 'assistant',
       content: '',
       timestamp: new Date(),
-      trainerName: selectedTrainer.name,
     };
     setMessages(prev => [...prev, assistantMessage]);
 
@@ -74,8 +58,7 @@ const ChatScreen: React.FC = () => {
       await sendMessageToClaude(
         text,
         messages,
-        selectedTrainer,
-        // Streaming-Callback: Antwort Stück für Stück anzeigen
+        TRAINER,
         (chunk: string) => {
           setMessages(prev =>
             prev.map(msg =>
@@ -100,29 +83,22 @@ const ChatScreen: React.FC = () => {
       setIsLoading(false);
     }
 
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [inputText, isLoading, messages, selectedTrainer]);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  }, [inputText, isLoading, messages]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Text style={styles.headerEmoji}>🐾</Text>
-        <Text style={styles.headerTitle}>PawCoach</Text>
-        <Text style={styles.headerSubtitle}>Dein KI-Hundetrainer</Text>
+        <Text style={styles.headerEmoji}>{TRAINER.avatar}</Text>
+        <View>
+          <Text style={styles.headerTitle}>{TRAINER.name}</Text>
+          <Text style={styles.headerSubtitle}>{TRAINER.specialty}</Text>
+        </View>
       </View>
-
-      <TrainerSelector
-        trainers={TRAINERS}
-        selectedTrainer={selectedTrainer}
-        onSelect={handleTrainerChange}
-      />
 
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
       >
         <FlatList
           ref={flatListRef}
@@ -131,13 +107,17 @@ const ChatScreen: React.FC = () => {
           renderItem={({ item }) => (
             <ChatBubble
               message={item}
-              trainerAvatar={selectedTrainer.avatar}
-              trainerName={selectedTrainer.name}
+              trainerAvatar={TRAINER.avatar}
+              trainerName={TRAINER.name}
             />
           )}
           contentContainerStyle={styles.messageList}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
-          ListFooterComponent={isLoading && messages[messages.length - 1]?.content === '' ? <TypingIndicator /> : null}
+          ListFooterComponent={
+            isLoading && messages[messages.length - 1]?.content === ''
+              ? <TypingIndicator />
+              : null
+          }
         />
 
         <View style={styles.inputContainer}>
@@ -145,7 +125,7 @@ const ChatScreen: React.FC = () => {
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
-            placeholder={`Frage ${selectedTrainer.name}...`}
+            placeholder={`Frage ${TRAINER.name}…`}
             placeholderTextColor="#A1887F"
             multiline
             maxLength={500}
@@ -166,36 +146,20 @@ const ChatScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFF8F0',
-  },
-  flex: {
-    flex: 1,
-  },
+  safeArea: { flex: 1, backgroundColor: '#FFF8F0' },
+  flex: { flex: 1 },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: '#4E342E',
   },
-  headerEmoji: {
-    fontSize: 28,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 1,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: '#BCAAA4',
-    marginTop: 2,
-  },
-  messageList: {
-    paddingVertical: 12,
-    paddingBottom: 8,
-  },
+  headerEmoji: { fontSize: 28 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
+  headerSubtitle: { fontSize: 12, color: '#BCAAA4', marginTop: 1 },
+  messageList: { paddingVertical: 12 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -220,21 +184,12 @@ const styles = StyleSheet.create({
     borderColor: '#E8D5B7',
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
-  sendButtonDisabled: {
-    backgroundColor: '#C8E6C9',
-  },
-  sendIcon: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    marginLeft: 2,
-  },
+  sendButtonDisabled: { backgroundColor: '#C8E6C9' },
+  sendIcon: { color: '#FFFFFF', fontSize: 18, marginLeft: 2 },
 });
 
 export default ChatScreen;

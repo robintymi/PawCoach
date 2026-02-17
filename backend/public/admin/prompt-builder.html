@@ -187,10 +187,9 @@
   <div class="page-title">✨ Prompt Builder</div>
   <p class="page-sub">Schreib frei drauf los – Claude verwandelt dein Wissen in einen perfekten KI-Trainer.</p>
 
-  <!-- Trainer Auswahl -->
-  <div class="trainer-tabs" id="trainerTabs"></div>
+  <div id="trainerInfo" style="margin-bottom:16px;font-size:13px;color:#8b949e"></div>
 
-  <div id="builderContent" style="display:none">
+  <div id="builderContent">
     <div class="columns">
 
       <!-- LINKE SPALTE: Input -->
@@ -301,7 +300,7 @@ Heute hatte ich eine Kundin mit einem 3-jährigen Labrador der an der Leine wie 
 
 <script>
   let trainers = [];
-  let selectedTrainerId = null;
+  let selectedTrainerId = 'trainer'; // Nur ein Trainer
   let currentMode = 'freestyle';
   let isGenerating = false;
   let generatedPrompt = '';
@@ -314,33 +313,12 @@ Heute hatte ich eine Kundin mit einem 3-jährigen Labrador der an der Leine wie 
   };
 
   // Trainer laden
-  fetch('/admin/api/trainers')
+  fetch('/admin/api/trainer')
     .then(r => r.json())
-    .then(data => {
-      trainers = data;
-      const tabs = document.getElementById('trainerTabs');
-      data.forEach((t, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'trainer-tab' + (i === 0 ? ' active' : '');
-        btn.dataset.id = t.id;
-        btn.innerHTML = `
-          <span>${t.avatar || '🐾'}</span>
-          <span>${t.name}</span>
-          <span class="status-dot ${t.hasCustomPrompt ? 'ready' : ''}" title="${t.hasCustomPrompt ? 'Prompt vorhanden' : 'Kein Prompt'}"></span>`;
-        btn.onclick = () => selectTrainer(t, btn);
-        tabs.appendChild(btn);
-      });
-      if (data.length > 0) selectTrainer(data[0], tabs.querySelector('.trainer-tab'));
+    .then(t => {
+      document.getElementById('trainerInfo').textContent = `${t.avatar} ${t.name} · ${t.specialty}`;
+      loadCurrentPrompt();
     });
-
-  function selectTrainer(trainer, btn) {
-    selectedTrainerId = trainer.id;
-    document.querySelectorAll('.trainer-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('builderContent').style.display = 'block';
-    resetOutput();
-    loadCurrentPrompt();
-  }
 
   function selectMode(card) {
     document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
@@ -401,7 +379,7 @@ Heute hatte ich eine Kundin mit einem 3-jährigen Labrador der an der Leine wie 
       const response = await fetch('/admin/api/build-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trainerId: selectedTrainerId, input, mode: currentMode }),
+        body: JSON.stringify({ input, mode: currentMode }),
       });
 
       if (!response.ok) {
@@ -475,7 +453,7 @@ Heute hatte ich eine Kundin mit einem 3-jährigen Labrador der an der Leine wie 
     }
     if (!generatedPrompt.trim()) { showToast('Kein Prompt zum Speichern', true); return; }
 
-    fetch(`/admin/api/systemprompt/${selectedTrainerId}`, {
+    fetch('/admin/api/systemprompt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: generatedPrompt }),
@@ -486,8 +464,7 @@ Heute hatte ich eine Kundin mit einem 3-jährigen Labrador der an der Leine wie 
         showToast('✅ Prompt gespeichert! Ab sofort aktiv für alle Kunden.');
         loadCurrentPrompt();
         // Status-Dot updaten
-        const tab = document.querySelector(`.trainer-tab[data-id="${selectedTrainerId}"] .status-dot`);
-        if (tab) tab.classList.add('ready');
+        // Prompt gespeichert
       } else {
         showToast(data.error || 'Fehler beim Speichern', true);
       }
@@ -497,7 +474,7 @@ Heute hatte ich eine Kundin mit einem 3-jährigen Labrador der an der Leine wie 
   function loadCurrentPrompt() {
     const el = document.getElementById('currentPrompt');
     el.innerHTML = '<span class="prompt-preview-placeholder">Lade…</span>';
-    fetch(`/admin/api/systemprompt/${selectedTrainerId}`)
+    fetch('/admin/api/systemprompt')
       .then(r => r.json())
       .then(data => {
         el.textContent = data.prompt || '(Kein Prompt gespeichert)';

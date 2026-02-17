@@ -7,7 +7,7 @@ import {
   addKnowledgeEntry,
   deleteKnowledgeEntry,
 } from '../knowledge';
-import { getTrainers, getTrainer, saveSystemPrompt } from '../trainers';
+import { getTrainer, saveSystemPrompt } from '../trainers';
 
 const router = Router();
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -30,46 +30,37 @@ router.get('/prompt-builder', requireAuth, (req: Request, res: Response) => {
 });
 
 // ── Trainer API ──────────────────────────────────────
-router.get('/api/trainers', requireAuth, (req: Request, res: Response) => {
-  const trainers = getTrainers().map(t => ({
-    id: t.id,
-    name: t.name,
-    specialty: t.specialty,
-    avatar: t.avatar,
-    hasCustomPrompt: t.systemPrompt.length > 200,
-  }));
-  res.json(trainers);
+router.get('/api/trainer', requireAuth, (req: Request, res: Response) => {
+  const t = getTrainer();
+  res.json({ id: t.id, name: t.name, specialty: t.specialty, avatar: t.avatar, hasCustomPrompt: t.systemPrompt.length > 200 });
 });
 
 // Aktuellen System Prompt abrufen
-router.get('/api/systemprompt/:trainerId', requireAuth, (req: Request, res: Response) => {
-  const trainer = getTrainer(req.params.trainerId);
-  if (!trainer) { res.status(404).json({ error: 'Trainer nicht gefunden' }); return; }
-  res.json({ prompt: trainer.systemPrompt });
+router.get('/api/systemprompt', requireAuth, (req: Request, res: Response) => {
+  res.json({ prompt: getTrainer().systemPrompt });
 });
 
 // System Prompt speichern
-router.post('/api/systemprompt/:trainerId', requireAuth, (req: Request, res: Response) => {
+router.post('/api/systemprompt', requireAuth, (req: Request, res: Response) => {
   const { prompt } = req.body;
   if (!prompt || prompt.trim().length < 50) {
     res.status(400).json({ error: 'Prompt muss mindestens 50 Zeichen lang sein' });
     return;
   }
-  saveSystemPrompt(req.params.trainerId, prompt.trim());
+  saveSystemPrompt('trainer', prompt.trim());
   res.json({ success: true });
 });
 
 // ── Prompt Builder: Claude baut den Prompt ──────────
 router.post('/api/build-prompt', requireAuth, async (req: Request, res: Response) => {
-  const { trainerId, input, mode } = req.body;
+  const { input, mode } = req.body;
 
-  if (!trainerId || !input || input.trim().length < 30) {
+  if (!input || input.trim().length < 30) {
     res.status(400).json({ error: 'Bitte mehr Text eingeben (min. 30 Zeichen)' });
     return;
   }
 
-  const trainer = getTrainer(trainerId);
-  if (!trainer) { res.status(404).json({ error: 'Trainer nicht gefunden' }); return; }
+  const trainer = getTrainer();
 
   const modeInstructions: Record<string, string> = {
     freestyle:
@@ -129,22 +120,22 @@ Wichtig: Schreibe NUR den fertigen System Prompt, keine Einleitung, keine Erklä
 });
 
 // ── Knowledge API ────────────────────────────────────
-router.get('/api/knowledge/:trainerId', requireAuth, (req: Request, res: Response) => {
-  res.json(getKnowledge(req.params.trainerId));
+router.get('/api/knowledge', requireAuth, (req: Request, res: Response) => {
+  res.json(getKnowledge('trainer'));
 });
 
-router.post('/api/knowledge/:trainerId', requireAuth, (req: Request, res: Response) => {
+router.post('/api/knowledge', requireAuth, (req: Request, res: Response) => {
   const { category, content } = req.body;
   if (!category || !content || content.trim().length < 10) {
     res.status(400).json({ error: 'Kategorie und Inhalt (min. 10 Zeichen) erforderlich' });
     return;
   }
-  addKnowledgeEntry(req.params.trainerId, category, content);
+  addKnowledgeEntry('trainer', category, content);
   res.json({ success: true });
 });
 
-router.delete('/api/knowledge/:trainerId/:index', requireAuth, (req: Request, res: Response) => {
-  deleteKnowledgeEntry(req.params.trainerId, parseInt(req.params.index));
+router.delete('/api/knowledge/:index', requireAuth, (req: Request, res: Response) => {
+  deleteKnowledgeEntry('trainer', parseInt(req.params.index));
   res.json({ success: true });
 });
 

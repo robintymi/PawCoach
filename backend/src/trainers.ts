@@ -11,52 +11,43 @@ export interface Trainer {
   systemPrompt: string;
 }
 
-// Basis-Trainer-Daten – hier echte Namen eintragen
-const BASE_TRAINERS: Omit<Trainer, 'systemPrompt'>[] = [
-  {
-    id: 'trainer_1',
-    name: 'Max Mustermann',       // ← Echten Namen eintragen
-    specialty: 'Welpen & Grundgehorsam',
-    avatar: '🐕',
-  },
-  {
-    id: 'trainer_2',
-    name: 'Lisa Beispiel',        // ← Echten Namen eintragen
-    specialty: 'Verhaltensprobleme & Aggression',
-    avatar: '🐩',
-  },
-];
+// ── Trainer-Profil hier anpassen ──────────────────────
+const TRAINER_BASE = {
+  id: 'trainer',
+  name: 'Dein Hundetrainer',      // ← Echten Namen eintragen
+  specialty: 'Hundeerziehung',    // ← Spezialgebiet eintragen
+  avatar: '🐕',
+};
+// ──────────────────────────────────────────────────────
 
-const DEFAULT_PROMPT = (name: string, specialty: string): string =>
-  `Du bist ${name}, ein erfahrener Hundetrainer mit dem Schwerpunkt "${specialty}". ` +
-  `Antworte ausschließlich als ${name}, gib praktische und klare Ratschläge auf Deutsch. ` +
+const DEFAULT_PROMPT = (): string =>
+  `Du bist ${TRAINER_BASE.name}, ein erfahrener Hundetrainer. ` +
+  `Antworte ausschließlich als ${TRAINER_BASE.name}, gib praktische und klare Ratschläge auf Deutsch. ` +
   `Nutze das Admin-Panel → Prompt Builder, um dieses Profil mit echtem Wissen zu befüllen.`;
 
-const loadStoredPrompts = (): Record<string, string> => {
+const loadStoredPrompt = (): string => {
   if (fs.existsSync(PROMPTS_FILE)) {
-    return JSON.parse(fs.readFileSync(PROMPTS_FILE, 'utf-8'));
+    const data = JSON.parse(fs.readFileSync(PROMPTS_FILE, 'utf-8'));
+    return data[TRAINER_BASE.id] || '';
   }
-  return {};
+  return '';
 };
 
-export const saveSystemPrompt = (trainerId: string, prompt: string): void => {
-  const stored = loadStoredPrompts();
-  stored[trainerId] = prompt;
+export const saveSystemPrompt = (_trainerId: string, prompt: string): void => {
   fs.mkdirSync(path.dirname(PROMPTS_FILE), { recursive: true });
-  fs.writeFileSync(PROMPTS_FILE, JSON.stringify(stored, null, 2));
+  const data: Record<string, string> = fs.existsSync(PROMPTS_FILE)
+    ? JSON.parse(fs.readFileSync(PROMPTS_FILE, 'utf-8'))
+    : {};
+  data[TRAINER_BASE.id] = prompt;
+  fs.writeFileSync(PROMPTS_FILE, JSON.stringify(data, null, 2));
 };
 
-// Immer frisch vom Disk lesen (damit gespeicherte Prompts sofort aktiv sind)
-export const getTrainers = (): Trainer[] => {
-  const stored = loadStoredPrompts();
-  return BASE_TRAINERS.map(t => ({
-    ...t,
-    systemPrompt: stored[t.id] || DEFAULT_PROMPT(t.name, t.specialty),
-  }));
-};
-
-export const getTrainer = (id: string): Trainer | undefined =>
-  getTrainers().find(t => t.id === id);
+// Immer frisch laden damit Prompt-Änderungen sofort wirksam sind
+export const getTrainer = (): Trainer => ({
+  ...TRAINER_BASE,
+  systemPrompt: loadStoredPrompt() || DEFAULT_PROMPT(),
+});
 
 // Rückwärts-Kompatibilität
+export const getTrainers = (): Trainer[] => [getTrainer()];
 export const TRAINERS = getTrainers();
