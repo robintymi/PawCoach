@@ -17,38 +17,55 @@ const twiml = (msg: string) =>
   `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${msg}</Message></Response>`;
 
 // KI-Kategorisierung: Claude wählt die passende Kategorie
+const CATEGORIES: { name: string; beschreibung: string }[] = [
+  { name: 'Hundeverhalten & Körpersprache', beschreibung: 'Ethologie, Calming Signals, Ausdrucksverhalten, Kommunikation des Hundes, Stresszeichen, Beschwichtigungssignale' },
+  { name: 'Lerntheorie & Trainingsmethoden', beschreibung: 'Operante/klassische Konditionierung, Clickertraining, positive Verstärkung, Markersignale, Trainingsaufbau, Timing' },
+  { name: 'Leinenführigkeit & Freilauf', beschreibung: 'Leinentraining, lockere Leine, Schleppleine, Geschirr vs. Halsband, Freilauf-Management' },
+  { name: 'Grundgehorsam & Signale', beschreibung: 'Sitz, Platz, Bleib, Fuß, Grundkommandos, Signalaufbau, Generalisierung' },
+  { name: 'Rückruf & Impulskontrolle', beschreibung: 'Abruftraining, Impulskontrolle, Frustrationstoleranz, Abbruchsignal, Stopp-Signal' },
+  { name: 'Welpen & Junghunde', beschreibung: 'Sozialisierungsphase, Welpenprägung, Stubenreinheit, Beißhemmung, Pubertät, altersgerechtes Training' },
+  { name: 'Angst & Unsicherheit', beschreibung: 'Ängstliche Hunde, Geräuschempfindlichkeit, Silvester, Gewitter, Traumata, Desensibilisierung, Gegenkonditionierung' },
+  { name: 'Aggression & Reaktivität', beschreibung: 'Leinenaggression, Ressourcenverteidigung, Territorialverhalten, reaktive Hunde, Beißvorfälle' },
+  { name: 'Sozialverhalten & Hundebegegnungen', beschreibung: 'Hund-Hund-Interaktion, Spielverhalten, Gruppentraining, Mehrhundehaltung, Hundeplatz' },
+  { name: 'Beschäftigung & Auslastung', beschreibung: 'Nasenarbeit, Mantrailing, Denkspiele, Futterspiele, Kopfarbeit, Schnüffelspiele, Apportieren' },
+  { name: 'Ernährung & Gesundheit', beschreibung: 'BARF, Futterauswahl, Tierarztbesuche, Medical Training, Gewicht, Allergien, Zahnpflege' },
+  { name: 'Mensch-Hund-Beziehung', beschreibung: 'Bindungsaufbau, Vertrauen, Teamwork, Beziehungspflege, Kommunikation Mensch-Hund' },
+  { name: 'Alltagssituationen & Management', beschreibung: 'Autofahren, Besuch, Tierarzt, Restaurant, Büro, Kinder, Jogger, Radfahrer, Management im Alltag' },
+  { name: 'Rassebesonderheiten', beschreibung: 'Rassespezifisches Verhalten, Hütehunde, Jagdhunde, Molosser, Terrier, rassbedingte Eigenschaften' },
+  { name: 'Philosophie & Trainingsansatz', beschreibung: 'Eigene Haltung, Trainingsphilosophie, Ethik, Umgang mit Kunden, persönliche Überzeugungen zum Hundetraining' },
+];
+
+const CATEGORY_NAMES = CATEGORIES.map(c => c.name);
+
 const categorize = async (text: string): Promise<string> => {
-  const categories = [
-    'Leinenführigkeit',
-    'Grundgehorsam',
-    'Sozialverhalten',
-    'Welpen-Erziehung',
-    'Angst & Aggression',
-    'Ernährung & Gesundheit',
-    'Methoden & Techniken',
-    'Alltagstipps',
-    'Philosophie & Haltung',
-  ];
+  const categoryList = CATEGORIES.map((c, i) =>
+    `${i + 1}. ${c.name} – ${c.beschreibung}`
+  ).join('\n');
 
   try {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 50,
+      max_tokens: 100,
       messages: [{
         role: 'user',
-        content: `Wähle EINE passende Kategorie für diesen Hundetrainer-Wissenseintrag.
-Antworte NUR mit dem Kategorienamen, nichts anderes.
+        content: `Du bist ein erfahrener Hundetrainer und sollst einen Wissenseintrag kategorisieren.
 
-Kategorien: ${categories.join(', ')}
+Lies den Text sorgfältig und überlege: Was ist das HAUPTTHEMA? Worum geht es im Kern?
 
-Text: "${text}"`,
+Verfügbare Kategorien:
+${categoryList}
+
+Text des Eintrags:
+"${text}"
+
+Antworte AUSSCHLIESSLICH mit dem exakten Kategorienamen (z.B. "Angst & Unsicherheit"). Kein anderer Text.`,
       }],
     });
 
     const result = (response.content[0] as { text: string }).text.trim();
-    return categories.find(c => result.includes(c)) || 'Alltagstipps';
+    return CATEGORY_NAMES.find(c => result.includes(c)) || 'Alltagssituationen & Management';
   } catch {
-    return 'Alltagstipps';
+    return 'Alltagssituationen & Management';
   }
 };
 
