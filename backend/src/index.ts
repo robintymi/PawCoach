@@ -53,7 +53,7 @@ app.post('/api/chat', async (req, res) => {
   }
 
   const trainer = await getTrainer();
-  const knowledgeAddendum = await buildKnowledgePrompt();
+  const knowledgeAddendum = await buildKnowledgePrompt(message);
   const systemPrompt = trainer.systemPrompt + knowledgeAddendum;
 
   const messages = [
