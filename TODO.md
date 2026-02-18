@@ -4,16 +4,15 @@ Entwicklungs-Roadmap und offene Aufgaben.
 
 ---
 
-## 🔴 Sofort (vor erstem Test)
+## 🔴 Sofort
 
-- [ ] **Trainer-Profil ausfüllen** – Namen + Spezialgebiet in `backend/src/trainers.ts` eintragen
-
-- [ ] **Prompt Builder nutzen** – Admin → Prompt Builder → Wissen und Persönlichkeit einspeisen
-  - Öffne: http://localhost:3000/admin/login (Passwort: `admin123`)
-  - Freestyle, Situationen oder Interview-Modus wählen
-  - Claude generiert daraus den System-Prompt
-
-- [ ] **Chat testen** – http://localhost:3000/ → Fragen stellen und Qualität prüfen
+- [x] **WhatsApp-Integration** – Wissen per WhatsApp einspeisen (Twilio Sandbox läuft)
+- [x] **Railway Deployment** – Backend live auf pawcoach-production.up.railway.app
+- [x] **Supabase** – Datenbank eingerichtet, Knowledge + System Prompts Tabellen
+- [x] **Kategorisierung** – 15 Kategorien mit KI-Zuordnung
+- [x] **Selektiver Wissensabruf** – Chat lädt nur relevante Kategorien
+- [ ] **Wissen einspeisen** – Per WhatsApp persönliches Trainerwissen einpflegen
+- [ ] **System Prompt generieren** – Per WhatsApp: `Prompt: [deine Beschreibung]` oder Admin-Panel
 
 ---
 
