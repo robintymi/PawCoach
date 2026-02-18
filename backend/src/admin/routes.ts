@@ -2,11 +2,7 @@ import { Router, Request, Response } from 'express';
 import path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth, handleLogin, handleLogout } from './auth';
-import {
-  getKnowledge,
-  addKnowledgeEntry,
-  deleteKnowledgeEntry,
-} from '../knowledge';
+import { getKnowledge, addKnowledgeEntry, deleteKnowledgeEntry } from '../knowledge';
 import { getTrainer, saveSystemPrompt } from '../trainers';
 
 const router = Router();
@@ -29,29 +25,30 @@ router.get('/prompt-builder', requireAuth, (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../../public/admin/prompt-builder.html'));
 });
 
-// ── Trainer API ──────────────────────────────────────
-router.get('/api/trainer', requireAuth, (req: Request, res: Response) => {
-  const t = getTrainer();
+// Trainer API
+router.get('/api/trainer', requireAuth, async (req: Request, res: Response) => {
+  const t = await getTrainer();
   res.json({ id: t.id, name: t.name, specialty: t.specialty, avatar: t.avatar, hasCustomPrompt: t.systemPrompt.length > 200 });
 });
 
 // Aktuellen System Prompt abrufen
-router.get('/api/systemprompt', requireAuth, (req: Request, res: Response) => {
-  res.json({ prompt: getTrainer().systemPrompt });
+router.get('/api/systemprompt', requireAuth, async (req: Request, res: Response) => {
+  const t = await getTrainer();
+  res.json({ prompt: t.systemPrompt });
 });
 
 // System Prompt speichern
-router.post('/api/systemprompt', requireAuth, (req: Request, res: Response) => {
+router.post('/api/systemprompt', requireAuth, async (req: Request, res: Response) => {
   const { prompt } = req.body;
   if (!prompt || prompt.trim().length < 50) {
     res.status(400).json({ error: 'Prompt muss mindestens 50 Zeichen lang sein' });
     return;
   }
-  saveSystemPrompt('trainer', prompt.trim());
+  await saveSystemPrompt(prompt.trim());
   res.json({ success: true });
 });
 
-// ── Prompt Builder: Claude baut den Prompt ──────────
+// Prompt Builder: Claude baut den Prompt
 router.post('/api/build-prompt', requireAuth, async (req: Request, res: Response) => {
   const { input, mode } = req.body;
 
@@ -60,7 +57,7 @@ router.post('/api/build-prompt', requireAuth, async (req: Request, res: Response
     return;
   }
 
-  const trainer = getTrainer();
+  const trainer = await getTrainer();
 
   const modeInstructions: Record<string, string> = {
     freestyle:
@@ -94,7 +91,6 @@ Erstelle daraus einen präzisen System Prompt der:
 
 Wichtig: Schreibe NUR den fertigen System Prompt, keine Einleitung, keine Erklärung. Beginne direkt mit "Du bist ${trainer.name}..."`;
 
-  // Streaming
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -119,23 +115,24 @@ Wichtig: Schreibe NUR den fertigen System Prompt, keine Einleitung, keine Erklä
   }
 });
 
-// ── Knowledge API ────────────────────────────────────
-router.get('/api/knowledge', requireAuth, (req: Request, res: Response) => {
-  res.json(getKnowledge('trainer'));
+// Knowledge API
+router.get('/api/knowledge', requireAuth, async (req: Request, res: Response) => {
+  const entries = await getKnowledge();
+  res.json(entries);
 });
 
-router.post('/api/knowledge', requireAuth, (req: Request, res: Response) => {
+router.post('/api/knowledge', requireAuth, async (req: Request, res: Response) => {
   const { category, content } = req.body;
   if (!category || !content || content.trim().length < 10) {
     res.status(400).json({ error: 'Kategorie und Inhalt (min. 10 Zeichen) erforderlich' });
     return;
   }
-  addKnowledgeEntry('trainer', category, content);
+  await addKnowledgeEntry(category, content);
   res.json({ success: true });
 });
 
-router.delete('/api/knowledge/:index', requireAuth, (req: Request, res: Response) => {
-  deleteKnowledgeEntry('trainer', parseInt(req.params.index));
+router.delete('/api/knowledge/:id', requireAuth, async (req: Request, res: Response) => {
+  await deleteKnowledgeEntry(parseInt(req.params.id));
   res.json({ success: true });
 });
 

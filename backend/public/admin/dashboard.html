@@ -341,14 +341,14 @@ Beispiel: 'Wenn ein Hund bellt, empfehle ich immer zuerst die Situation zu analy
       list.innerHTML = `<div class="empty-state"><div class="icon">🧠</div><p>Noch kein Wissen gespeichert.<br>Füge oben deinen ersten Eintrag hinzu!</p></div>`;
       return;
     }
-    list.innerHTML = entries.map((e, i) => `
+    list.innerHTML = entries.map(e => `
       <div class="knowledge-item">
         <span class="knowledge-item-category">${e.category}</span>
         <div style="flex:1">
           <div class="knowledge-item-content">${e.content}</div>
-          <div class="knowledge-item-date">${new Date(e.addedAt).toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
+          <div class="knowledge-item-date">${new Date(e.created_at).toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
         </div>
-        <button class="btn btn-red" onclick="deleteEntry(${i})">Löschen</button>
+        <button class="btn btn-red" onclick="deleteEntry(${e.id})">Löschen</button>
       </div>`).join('');
   }
 

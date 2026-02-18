@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
@@ -6,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getTrainer } from './trainers';
 import { buildKnowledgePrompt } from './knowledge';
 import adminRouter from './admin/routes';
+import whatsappRouter from './whatsapp';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,7 +24,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'pawcoach-secret-2024',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 8 * 60 * 60 * 1000 }, // 8 Stunden
+  cookie: { maxAge: 8 * 60 * 60 * 1000 },
 }));
 
 const client = new Anthropic({
@@ -31,14 +35,12 @@ const client = new Anthropic({
 // ÖFFENTLICHE ROUTEN (Kunden)
 // ──────────────────────────────────────────
 
-// Chat-Interface aufrufen (via express.static → public/chat/index.html)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/chat/index.html'));
 });
 
-// Trainer-Info abrufen (für Kunden-UI)
-app.get('/api/trainer', (req, res) => {
-  const { id, name, specialty, avatar } = getTrainer();
+app.get('/api/trainer', async (req, res) => {
+  const { id, name, specialty, avatar } = await getTrainer();
   res.json({ id, name, specialty, avatar });
 });
 
@@ -50,8 +52,8 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'message ist erforderlich' });
   }
 
-  const trainer = getTrainer();
-  const knowledgeAddendum = buildKnowledgePrompt(trainer.id);
+  const trainer = await getTrainer();
+  const knowledgeAddendum = await buildKnowledgePrompt();
   const systemPrompt = trainer.systemPrompt + knowledgeAddendum;
 
   const messages = [
@@ -62,7 +64,6 @@ app.post('/api/chat', async (req, res) => {
     { role: 'user' as const, content: message },
   ];
 
-  // Streaming via Server-Sent Events
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -94,12 +95,18 @@ app.post('/api/chat', async (req, res) => {
 // ──────────────────────────────────────────
 app.use('/admin', adminRouter);
 
+// ──────────────────────────────────────────
+// WHATSAPP WEBHOOK
+// ──────────────────────────────────────────
+app.use('/webhook', whatsappRouter);
+
 // Health Check
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  const trainer = await getTrainer();
   res.json({
     status: 'ok',
     service: 'PawCoach API',
-    trainer: getTrainer().name,
+    trainer: trainer.name,
   });
 });
 

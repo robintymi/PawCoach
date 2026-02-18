@@ -10,10 +10,14 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
+    "@supabase/supabase-js": "^2.96.0",
+    "@types/dotenv": "^6.1.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
     "express": "^4.22.1",
-    "express-session": "^1.19.0"
+    "express-session": "^1.19.0",
+    "twilio": "^5.12.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
