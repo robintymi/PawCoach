@@ -13,8 +13,11 @@ const ALLOWED_NUMBERS = (process.env.WHATSAPP_ALLOWED_NUMBERS || '')
   .filter(Boolean);
 
 // Twilio sendet Antwort als TwiML XML
+const escapeXml = (text: string) =>
+  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 const twiml = (msg: string) =>
-  `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${msg}</Message></Response>`;
+  `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(msg)}</Message></Response>`;
 
 // KI-Kategorisierung: Claude wählt die passende Kategorie
 const CATEGORIES: { name: string; beschreibung: string }[] = [
