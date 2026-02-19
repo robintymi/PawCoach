@@ -44,7 +44,7 @@ const categorize = async (text: string): Promise<string> => {
 
   try {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 100,
       messages: [{
         role: 'user',
