@@ -12,17 +12,23 @@
 - [x] TwiML XML Escaping Fix
 - [x] Mobile App auf Backend-API umgestellt (kein API-Key mehr in App)
 - [x] EAS Build-Config (eas.json) + Bundle Identifiers
+- [x] **Wissensdatenbank komplett** – 163 Einträge in 15 Kategorien
+  - Alle 20 Sektionen der Wissenslandkarte abgedeckt
+  - Trainingsmethoden, Verhaltensprobleme, Rassen, Gesundheit, Welpen, Spezialtraining, Alltag, Tierschutz, Senioren, Equipment, Recht, u.v.m.
+- [x] **Analytics-System** – Code fertig (Backend + Admin-Dashboard)
+  - Chat-Logging mit Quelle (web/app/whatsapp)
+  - Sternebewertung (1-5) + Freitext-Feedback
+  - Admin-Dashboard: /admin/analytics.html
+  - API-Endpunkte: /api/analytics/summary, /questions, /low-rated
+  - Tagesstatistiken, Kategorie-Nutzung, schlecht bewertete Antworten
 
 ---
 
 ## DU musst machen (Robin)
 
 ### Jetzt:
-- [ ] **Wissen einspeisen** – Per WhatsApp persönliches Trainerwissen einpflegen
-  - Schreib einfach an die Twilio-Nummer, wird automatisch kategorisiert
-  - Tipp: Pro Nachricht ein klares Thema, nicht zu viel mischen
-  - Ziel: mindestens 30-50 Einträge für gute Chat-Qualität
-- [ ] **System Prompt generieren** – Wenn genug Wissen drin ist:
+- [ ] **Analytics-Tabelle in Supabase erstellen** – SQL im Supabase SQL Editor ausführen (siehe unten)
+- [ ] **System Prompt generieren** – Wenn noch nicht geschehen:
   - Per WhatsApp: `Prompt: Ich bin [Name], Hundetrainer mit Schwerpunkt [X]. Mein Stil ist [Y]...`
   - Oder über Admin-Panel: pawcoach-production.up.railway.app/admin/login
 
@@ -35,6 +41,28 @@
 - [ ] **Supabase wach halten** – Free Tier pausiert nach 7 Tagen Inaktivität!
   - Option A: Regelmäßig nutzen
   - Option B: Upgrade auf Pro ($25/Monat)
+
+### SQL für Analytics-Tabelle:
+```sql
+CREATE TABLE IF NOT EXISTS chat_analytics (
+  id BIGSERIAL PRIMARY KEY,
+  user_question TEXT NOT NULL,
+  assistant_response TEXT,
+  categories_used TEXT[] DEFAULT '{}',
+  response_length INTEGER DEFAULT 0,
+  rating SMALLINT CHECK (rating >= 1 AND rating <= 5),
+  feedback TEXT,
+  source VARCHAR(20) DEFAULT 'web',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_chat_analytics_created ON chat_analytics(created_at DESC);
+CREATE INDEX idx_chat_analytics_rating ON chat_analytics(rating) WHERE rating IS NOT NULL;
+CREATE INDEX idx_chat_analytics_source ON chat_analytics(source);
+
+ALTER TABLE chat_analytics ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON chat_analytics FOR ALL USING (true) WITH CHECK (true);
+```
 
 ---
 

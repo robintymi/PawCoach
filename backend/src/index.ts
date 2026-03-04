@@ -10,6 +10,7 @@ import { getTrainer } from './trainers';
 import { buildKnowledgePrompt } from './knowledge';
 import adminRouter from './admin/routes';
 import whatsappRouter from './whatsapp';
+import { logChat, rateChat, getAnalyticsSummary, getTopQuestions, getLowRatedChats } from './analytics';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -76,13 +77,26 @@ app.post('/api/chat', async (req, res) => {
       messages,
     });
 
+    let fullResponse = '';
     for await (const chunk of stream) {
       if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+        fullResponse += chunk.delta.text;
         res.write(`data: ${JSON.stringify({ text: chunk.delta.text })}\n\n`);
       }
     }
-    res.write('data: [DONE]\n\n');
-    res.end();
+
+    // Analytics: Chat-Interaktion loggen (async, blockiert nicht die Response)
+    const source = (req.headers['x-source'] as 'app' | 'web' | 'whatsapp') || 'web';
+    logChat(message, fullResponse, [], source).then(chatId => {
+      if (chatId) {
+        res.write(`data: ${JSON.stringify({ chatId })}\n\n`);
+      }
+      res.write('data: [DONE]\n\n');
+      res.end();
+    }).catch(() => {
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
   } catch (error) {
     console.error('Claude API Fehler:', error);
     res.write(`data: ${JSON.stringify({ error: 'Interner Fehler' })}\n\n`);
@@ -99,6 +113,39 @@ app.use('/admin', adminRouter);
 // WHATSAPP WEBHOOK
 // ──────────────────────────────────────────
 app.use('/webhook', whatsappRouter);
+
+// ──────────────────────────────────────────
+// ANALYTICS API
+// ──────────────────────────────────────────
+
+// Kunde bewertet eine Chat-Antwort (1-5 Sterne)
+app.post('/api/rate', async (req, res) => {
+  const { chatId, rating, feedback } = req.body;
+  if (!chatId || !rating || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: 'chatId und rating (1-5) erforderlich' });
+  }
+  const success = await rateChat(chatId, rating, feedback);
+  res.json({ success });
+});
+
+// Admin: Analytics-Übersicht
+app.get('/api/analytics/summary', async (req, res) => {
+  const summary = await getAnalyticsSummary();
+  res.json(summary);
+});
+
+// Admin: Letzte Fragen
+app.get('/api/analytics/questions', async (req, res) => {
+  const limit = parseInt(req.query.limit as string) || 50;
+  const questions = await getTopQuestions(limit);
+  res.json(questions);
+});
+
+// Admin: Schlecht bewertete Antworten
+app.get('/api/analytics/low-rated', async (req, res) => {
+  const chats = await getLowRatedChats(2, 20);
+  res.json(chats);
+});
 
 // Health Check
 app.get('/health', async (req, res) => {

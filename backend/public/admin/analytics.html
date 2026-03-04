@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PawCoach Analytics</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f0eb; color: #333; padding: 20px; }
+    h1 { color: #8B4513; margin-bottom: 20px; }
+    h2 { color: #A0522D; margin: 20px 0 10px; font-size: 1.2em; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+    .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .card-number { font-size: 2em; font-weight: bold; color: #8B4513; }
+    .card-label { color: #888; font-size: 0.9em; margin-top: 5px; }
+    .stars { color: #f5a623; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 25px; }
+    th { background: #8B4513; color: white; text-align: left; padding: 12px; font-weight: 500; }
+    td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+    tr:hover { background: #faf5f0; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
+    .badge-web { background: #e3f2fd; color: #1565c0; }
+    .badge-app { background: #e8f5e9; color: #2e7d32; }
+    .badge-whatsapp { background: #f1f8e9; color: #558b2f; }
+    .rating-bad { color: #d32f2f; }
+    .rating-ok { color: #f57c00; }
+    .rating-good { color: #388e3c; }
+    .bar { background: #e0d5c8; border-radius: 4px; height: 20px; position: relative; }
+    .bar-fill { background: #8B4513; height: 100%; border-radius: 4px; min-width: 2px; }
+    .nav { margin-bottom: 20px; }
+    .nav a { color: #8B4513; margin-right: 15px; text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
+    .question-text { max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .loading { text-align: center; padding: 40px; color: #888; }
+    .refresh-btn { background: #8B4513; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
+    .refresh-btn:hover { background: #A0522D; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <a href="/admin/dashboard.html">Dashboard</a>
+    <a href="/admin/analytics.html"><strong>Analytics</strong></a>
+    <a href="/admin/prompt-builder.html">System Prompt</a>
+  </div>
+
+  <h1>PawCoach Analytics</h1>
+  <button class="refresh-btn" onclick="loadAnalytics()">Aktualisieren</button>
+
+  <div id="content">
+    <div class="loading">Lade Analytics...</div>
+  </div>
+
+  <script>
+    async function loadAnalytics() {
+      const el = document.getElementById('content');
+      el.innerHTML = '<div class="loading">Lade...</div>';
+
+      try {
+        const res = await fetch('/api/analytics/summary');
+        const data = await res.json();
+        renderAnalytics(data);
+      } catch (e) {
+        el.innerHTML = '<div class="card"><p>Analytics noch nicht verfügbar. Stelle sicher, dass die <code>chat_analytics</code> Tabelle in Supabase erstellt wurde.</p></div>';
+      }
+    }
+
+    function renderStars(rating) {
+      if (!rating) return '-';
+      const full = Math.floor(rating);
+      let stars = '';
+      for (let i = 0; i < 5; i++) stars += i < full ? '★' : '☆';
+      const cls = rating <= 2 ? 'rating-bad' : rating <= 3.5 ? 'rating-ok' : 'rating-good';
+      return `<span class="${cls} stars">${stars}</span> ${rating}`;
+    }
+
+    function renderAnalytics(data) {
+      const { overview, recentQuestions, lowRatedChats, dailyStats, categoryUsage } = data;
+
+      let html = '';
+
+      // Overview Cards
+      html += '<div class="grid">';
+      html += `<div class="card"><div class="card-number">${overview.totalChats}</div><div class="card-label">Chat-Anfragen gesamt</div></div>`;
+      html += `<div class="card"><div class="card-number">${renderStars(overview.averageRating.avg)}</div><div class="card-label">${overview.averageRating.count} Bewertungen</div></div>`;
+      html += `<div class="card"><div class="card-number rating-bad">${overview.lowRatedCount}</div><div class="card-label">Schlecht bewertet (≤2★)</div></div>`;
+      html += '</div>';
+
+      // Kategorie-Nutzung
+      if (categoryUsage && categoryUsage.length > 0) {
+        html += '<h2>Welche Kategorien brauchen Kunden am meisten?</h2>';
+        const maxCount = categoryUsage[0][1];
+        html += '<table><tr><th>Kategorie</th><th>Anfragen</th><th></th></tr>';
+        for (const [cat, count] of categoryUsage) {
+          const pct = Math.round((count / maxCount) * 100);
+          html += `<tr><td>${cat}</td><td>${count}</td><td><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div></td></tr>`;
+        }
+        html += '</table>';
+      }
+
+      // Letzte Fragen
+      if (recentQuestions && recentQuestions.length > 0) {
+        html += '<h2>Letzte Kundenfragen</h2>';
+        html += '<table><tr><th>Frage</th><th>Bewertung</th><th>Quelle</th><th>Datum</th></tr>';
+        for (const q of recentQuestions) {
+          const date = new Date(q.created_at).toLocaleDateString('de-DE');
+          const badge = q.source === 'app' ? 'badge-app' : q.source === 'whatsapp' ? 'badge-whatsapp' : 'badge-web';
+          html += `<tr>
+            <td class="question-text" title="${q.user_question}">${q.user_question}</td>
+            <td>${renderStars(q.rating)}</td>
+            <td><span class="badge ${badge}">${q.source}</span></td>
+            <td>${date}</td>
+          </tr>`;
+        }
+        html += '</table>';
+      }
+
+      // Schlecht bewertete Antworten
+      if (lowRatedChats && lowRatedChats.length > 0) {
+        html += '<h2>Schlecht bewertete Antworten (Optimierungspotential)</h2>';
+        html += '<table><tr><th>Kundenfrage</th><th>Bewertung</th><th>Feedback</th></tr>';
+        for (const c of lowRatedChats) {
+          html += `<tr>
+            <td class="question-text" title="${c.user_question}">${c.user_question}</td>
+            <td>${renderStars(c.rating)}</td>
+            <td>${c.feedback || '-'}</td>
+          </tr>`;
+        }
+        html += '</table>';
+      }
+
+      // Tagesstatistiken
+      if (dailyStats && dailyStats.length > 0) {
+        html += '<h2>Tagesstatistiken</h2>';
+        html += '<table><tr><th>Tag</th><th>Anfragen</th><th>Bewertungen</th><th>Ø Rating</th></tr>';
+        for (const d of dailyStats) {
+          html += `<tr><td>${d.day}</td><td>${d.total}</td><td>${d.rated}</td><td>${d.avgRating ? renderStars(d.avgRating) : '-'}</td></tr>`;
+        }
+        html += '</table>';
+      }
+
+      if (!recentQuestions || recentQuestions.length === 0) {
+        html += '<div class="card" style="margin-top:20px;text-align:center;padding:40px"><p>Noch keine Chat-Daten vorhanden. Analytics werden befüllt sobald Kunden den Chat nutzen.</p></div>';
+      }
+
+      document.getElementById('content').innerHTML = html;
+    }
+
+    loadAnalytics();
+  </script>
+</body>
+</html>
