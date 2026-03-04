@@ -1,20 +1,36 @@
 import { Trainer } from '../types';
+import { API_BASE_URL } from '../config';
 
-// ── Trainer-Profil hier anpassen ──────────────────────
-// Den System Prompt am besten über das Admin-Panel →
-// Prompt Builder generieren lassen.
-// ──────────────────────────────────────────────────────
-
-export const TRAINER: Trainer = {
+// Fallback bis Trainer-Profil vom Backend geladen ist
+const DEFAULT_TRAINER: Trainer = {
   id: 'trainer',
-  name: 'Dein Hundetrainer',      // ← Echten Namen eintragen
-  specialty: 'Hundeerziehung',    // ← Spezialgebiet eintragen
+  name: 'PawCoach',
+  specialty: 'Hundeerziehung',
   avatar: '🐕',
-  systemPrompt:
-    'Du bist ein erfahrener Hundetrainer. Antworte ausschließlich in dieser Rolle, ' +
-    'gib praktische und klare Ratschläge auf Deutsch. Nutze das Admin-Panel → Prompt Builder, ' +
-    'um dieses Profil mit echtem Wissen zu befüllen.',
+  systemPrompt: '',
 };
 
-export const getWelcomeMessage = (): string =>
-  `Hallo! Ich bin ${TRAINER.name}. Wie kann ich dir helfen? ${TRAINER.avatar}`;
+// Trainer-Profil vom Backend laden
+export const fetchTrainer = async (): Promise<Trainer> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/trainer`);
+    if (!res.ok) return DEFAULT_TRAINER;
+    const data = await res.json();
+    return {
+      id: data.id || DEFAULT_TRAINER.id,
+      name: data.name || DEFAULT_TRAINER.name,
+      specialty: data.specialty || DEFAULT_TRAINER.specialty,
+      avatar: data.avatar || DEFAULT_TRAINER.avatar,
+      systemPrompt: '',
+    };
+  } catch {
+    return DEFAULT_TRAINER;
+  }
+};
+
+export const TRAINER = DEFAULT_TRAINER;
+
+export const getWelcomeMessage = (trainer?: Trainer): string => {
+  const t = trainer || DEFAULT_TRAINER;
+  return `Hallo! Ich bin ${t.name}. Wie kann ich dir helfen? ${t.avatar}`;
+};

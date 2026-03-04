@@ -1,136 +1,63 @@
 # TODO – PawCoach 🐾
 
-Entwicklungs-Roadmap und offene Aufgaben.
+---
+
+## Erledigt
+
+- [x] Express Backend + SSE Streaming Chat
+- [x] Railway Deployment (pawcoach-production.up.railway.app)
+- [x] Supabase Datenbank (Knowledge + System Prompts)
+- [x] WhatsApp-Integration (Twilio Sandbox, 15 Kategorien, Haiku-Kategorisierung)
+- [x] Selektiver Wissensabruf (Haiku wählt relevante Kategorien pro Frage)
+- [x] TwiML XML Escaping Fix
+- [x] Mobile App auf Backend-API umgestellt (kein API-Key mehr in App)
+- [x] EAS Build-Config (eas.json) + Bundle Identifiers
 
 ---
 
-## 🔴 Sofort
+## DU musst machen (Robin)
 
-- [x] **WhatsApp-Integration** – Wissen per WhatsApp einspeisen (Twilio Sandbox läuft)
-- [x] **Railway Deployment** – Backend live auf pawcoach-production.up.railway.app
-- [x] **Supabase** – Datenbank eingerichtet, Knowledge + System Prompts Tabellen
-- [x] **Kategorisierung** – 15 Kategorien mit KI-Zuordnung
-- [x] **Selektiver Wissensabruf** – Chat lädt nur relevante Kategorien
+### Jetzt:
 - [ ] **Wissen einspeisen** – Per WhatsApp persönliches Trainerwissen einpflegen
-- [ ] **System Prompt generieren** – Per WhatsApp: `Prompt: [deine Beschreibung]` oder Admin-Panel
+  - Schreib einfach an die Twilio-Nummer, wird automatisch kategorisiert
+  - Tipp: Pro Nachricht ein klares Thema, nicht zu viel mischen
+  - Ziel: mindestens 30-50 Einträge für gute Chat-Qualität
+- [ ] **System Prompt generieren** – Wenn genug Wissen drin ist:
+  - Per WhatsApp: `Prompt: Ich bin [Name], Hundetrainer mit Schwerpunkt [X]. Mein Stil ist [Y]...`
+  - Oder über Admin-Panel: pawcoach-production.up.railway.app/admin/login
+
+### Danach:
+- [ ] **App testen** – Expo Go auf Handy, Chat-Qualität prüfen
+- [ ] **App-Icon** – Eigenes Logo erstellen/erstellen lassen (1024x1024 PNG)
+  - Ablegen in `PawCoach/assets/icon.png` + `adaptive-icon.png`
+- [ ] **Apple Developer Account** – developer.apple.com (99$/Jahr)
+- [ ] **Google Play Account** – play.google.com/console (25$ einmalig)
+- [ ] **Supabase wach halten** – Free Tier pausiert nach 7 Tagen Inaktivität!
+  - Option A: Regelmäßig nutzen
+  - Option B: Upgrade auf Pro ($25/Monat)
 
 ---
 
-## 🟡 Phase 1 – MVP (erste funktionierende Version)
+## Nächste technische Schritte (Claude macht)
 
-- [ ] App auf echtem Gerät testen (iOS + Android)
-- [ ] Trainer-Antwortqualität prüfen und System Prompts verfeinern
-- [ ] Fehlerbehandlung testen (kein Internet, falscher API-Key)
-- [ ] App-Icon anpassen (eigenes Logo in `assets/`)
-- [ ] Splash Screen anpassen
-- [ ] App-Name in `app.json` finalisieren
-
----
-
-## 🟠 Phase 2 – Backend & Sicherheit
-
-- [ ] **Backend deployen** (z.B. Railway, Render, Fly.io)
-  ```bash
-  cd backend
-  npm install
-  # ANTHROPIC_API_KEY im Hosting-Dashboard setzen
-  ```
-- [ ] Mobile App auf Backend-URL umstellen (statt direktem Claude-Aufruf)
-- [ ] `dangerouslyAllowBrowser: true` aus `claudeApi.ts` entfernen
-- [ ] Rate-Limiting im Backend hinzufügen (zu viele Anfragen pro User)
-- [ ] Einfache Authentifizierung für API-Endpunkt
+- [ ] Rate-Limiting im Backend (Schutz vor Missbrauch)
+- [ ] Supabase RLS absichern (aktuell allow-all)
+- [ ] Chat-Verlauf in App speichern (AsyncStorage)
+- [ ] Offline-Erkennung in der App
+- [ ] User-Auth (Supabase Auth) für Abo-Modell
+- [ ] Abo-System (RevenueCat für iOS/Android)
 
 ---
 
-## 📱 WhatsApp-Integration – Wissen per WhatsApp einspeisen
+## Store-Veröffentlichung
 
-**Ziel:** Trainer schreibt unterwegs per WhatsApp → wird automatisch als Wissenseintrag gespeichert.
-
-### Schritte:
-
-- [ ] **1. Backend deployen** (Voraussetzung – öffentliche URL nötig für Webhooks)
-  - Railway.app empfohlen: kostenloses Tier, einfaches Setup
-  - `railway login` → `railway init` → `railway up`
-  - Umgebungsvariablen im Dashboard setzen (`ANTHROPIC_API_KEY`, `SESSION_SECRET`)
-
-- [ ] **2. Twilio Account anlegen**
-  - Kostenlos auf [twilio.com](https://twilio.com) registrieren
-  - WhatsApp Sandbox aktivieren (kein Business-Account nötig zum Testen)
-  - Später: echte WhatsApp-Nummer kaufen (~1$/Monat)
-
-- [ ] **3. Twilio npm-Paket installieren**
-  ```bash
-  cd backend && npm install twilio
-  ```
-
-- [ ] **4. Webhook-Endpunkt im Backend bauen** (`backend/src/whatsapp.ts`)
-  - `POST /webhook/whatsapp` empfängt eingehende Nachrichten
-  - Nur Nachrichten von deiner Handynummer werden akzeptiert (Sicherheit)
-  - Nachricht wird automatisch als Wissenseintrag gespeichert
-  - Bestätigungs-Reply: "✅ Gespeichert unter Kategorie: Methoden & Techniken"
-
-- [ ] **5. KI-Kategorisierung** – Claude analysiert deine Nachricht und wählt passende Kategorie
-  - Einfaches Format: einfach drauflosschreiben
-  - Oder mit Prefix: `"Leine: Wenn der Hund zieht..."` → Kategorie wird erkannt
-
-- [ ] **6. Webhook-URL in Twilio eintragen**
-  - Twilio Dashboard → WhatsApp → Webhook URL: `https://deine-app.railway.app/webhook/whatsapp`
-
-- [ ] **7. Testen**
-  - WhatsApp an Twilio-Nummer: `"join [sandbox-code]"` (einmalig)
-  - Erste Nachricht schicken → Wissenseintrag im Dashboard prüfen
-
----
-
-## 🟢 Phase 3 – Features & UX
-
-- [ ] **Chat-Verlauf speichern** (AsyncStorage – Gespräche bleiben erhalten)
-- [ ] **Mehrere Chat-Sessions** (neues Gespräch starten ohne App-Restart)
-- [ ] **Trainer-Profilseite** (Foto, Bio, Kontaktdaten)
-- [ ] **Feedback-Funktion** (Daumen hoch/runter für Antworten)
-- [ ] **Offline-Meldung** wenn kein Internet vorhanden
-- [ ] **Dark Mode** Support
-- [ ] **Push-Notifications** für neue Trainer-Tipps
-- [ ] Mehrsprachigkeit (DE / EN)
-
----
-
-## 🔵 Phase 4 – Veröffentlichung
-
-- [ ] **App Store Account** anlegen (Apple Developer Program – 99$/Jahr)
-- [ ] **Google Play Account** anlegen (25$ einmalig)
 - [ ] Datenschutzerklärung schreiben
 - [ ] Nutzungsbedingungen schreiben
-- [ ] App-Beschreibung für die Stores
-- [ ] Screenshots für App Store / Play Store
-- [ ] **EAS Build** einrichten für Store-Builds:
-  ```bash
-  npm install -g eas-cli
-  eas build --platform all
-  ```
-- [ ] Beta-Test mit Expo TestFlight / Internal Track
+- [ ] App-Beschreibung + Screenshots
+- [ ] `eas build --platform all`
+- [ ] Beta-Test via TestFlight / Internal Track
+- [ ] Store-Einreichung
 
 ---
 
-## 💡 Ideen (Backlog)
-
-- Buchungssystem direkt in der App (Termin beim echten Trainer buchen)
-- Video-Tipps der Trainer einbetten
-- Community-Forum / Q&A
-- Hundetagebuch (Fortschritt dokumentieren)
-- Rassen-spezifische Tipps
-- Notfall-Hotline Button
-
----
-
-## 🐛 Bekannte Probleme
-
-> Hier bekannte Bugs eintragen
-
-| # | Problem | Status |
-|---|---|---|
-| – | noch keine Bugs gemeldet | – |
-
----
-
-_Zuletzt aktualisiert: 2026-02-17_
+_Zuletzt aktualisiert: 2026-03-04_

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -11,13 +11,14 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { Message } from '../types';
-import { TRAINER, getWelcomeMessage } from '../constants/trainers';
+import { Message, Trainer } from '../types';
+import { TRAINER, fetchTrainer, getWelcomeMessage } from '../constants/trainers';
 import { sendMessageToClaude } from '../services/claudeApi';
 import ChatBubble from '../components/ChatBubble';
 import TypingIndicator from '../components/TypingIndicator';
 
 const ChatScreen: React.FC = () => {
+  const [trainer, setTrainer] = useState<Trainer>(TRAINER);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
@@ -29,6 +30,19 @@ const ChatScreen: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  // Trainer-Profil vom Backend laden
+  useEffect(() => {
+    fetchTrainer().then(t => {
+      setTrainer(t);
+      setMessages([{
+        id: '0',
+        role: 'assistant',
+        content: getWelcomeMessage(t),
+        timestamp: new Date(),
+      }]);
+    });
+  }, []);
 
   const handleSend = useCallback(async () => {
     const text = inputText.trim();
@@ -58,7 +72,7 @@ const ChatScreen: React.FC = () => {
       await sendMessageToClaude(
         text,
         messages,
-        TRAINER,
+        trainer,
         (chunk: string) => {
           setMessages(prev =>
             prev.map(msg =>
@@ -84,15 +98,15 @@ const ChatScreen: React.FC = () => {
     }
 
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [inputText, isLoading, messages]);
+  }, [inputText, isLoading, messages, trainer]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Text style={styles.headerEmoji}>{TRAINER.avatar}</Text>
+        <Text style={styles.headerEmoji}>{trainer.avatar}</Text>
         <View>
-          <Text style={styles.headerTitle}>{TRAINER.name}</Text>
-          <Text style={styles.headerSubtitle}>{TRAINER.specialty}</Text>
+          <Text style={styles.headerTitle}>{trainer.name}</Text>
+          <Text style={styles.headerSubtitle}>{trainer.specialty}</Text>
         </View>
       </View>
 
@@ -107,8 +121,8 @@ const ChatScreen: React.FC = () => {
           renderItem={({ item }) => (
             <ChatBubble
               message={item}
-              trainerAvatar={TRAINER.avatar}
-              trainerName={TRAINER.name}
+              trainerAvatar={trainer.avatar}
+              trainerName={trainer.name}
             />
           )}
           contentContainerStyle={styles.messageList}
@@ -125,7 +139,7 @@ const ChatScreen: React.FC = () => {
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
-            placeholder={`Frage ${TRAINER.name}…`}
+            placeholder={`Frage ${trainer.name}…`}
             placeholderTextColor="#A1887F"
             multiline
             maxLength={500}

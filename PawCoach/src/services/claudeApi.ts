@@ -1,74 +1,59 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { API_BASE_URL } from '../config';
 import { Message, Trainer } from '../types';
 
-// WICHTIG: In Produktion über ein Backend proxyen, niemals den API-Key
-// direkt in der App speichern! Siehe backend/ Ordner.
-const getApiKey = (): string => {
-  // Für Entwicklung: In app.config.js oder .env setzen
-  // In Produktion: Über Backend-API abrufen
-  const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error('EXPO_PUBLIC_ANTHROPIC_API_KEY ist nicht gesetzt!');
-  }
-  return apiKey;
-};
+// Chat läuft jetzt über das Backend – kein API-Key in der App nötig.
+// Das Backend nutzt den System Prompt + Wissen aus Supabase automatisch.
 
 export const sendMessageToClaude = async (
   userMessage: string,
   conversationHistory: Message[],
-  trainer: Trainer,
+  _trainer: Trainer,
   onChunk?: (chunk: string) => void
 ): Promise<string> => {
-  const client = new Anthropic({
-    apiKey: getApiKey(),
-    dangerouslyAllowBrowser: true, // Nur für Dev - in Prod über Backend!
-  });
-
-  // Conversation history für Claude aufbereiten
-  const messages = conversationHistory
+  const history = conversationHistory
     .filter(msg => msg.role === 'user' || msg.role === 'assistant')
-    .map(msg => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
-    }));
+    .map(msg => ({ role: msg.role, content: msg.content }));
 
-  // Aktuelle Nachricht hinzufügen
-  messages.push({ role: 'user', content: userMessage });
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE_URL}/api/chat`);
+    xhr.setRequestHeader('Content-Type', 'application/json');
 
-  try {
-    if (onChunk) {
-      // Streaming-Modus für bessere UX
-      let fullResponse = '';
-      const stream = client.messages.stream({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 1024,
-        system: trainer.systemPrompt,
-        messages,
-      });
+    let fullResponse = '';
+    let lastProcessed = 0;
 
-      for await (const chunk of stream) {
-        if (
-          chunk.type === 'content_block_delta' &&
-          chunk.delta.type === 'text_delta'
-        ) {
-          fullResponse += chunk.delta.text;
-          onChunk(chunk.delta.text);
+    xhr.onprogress = () => {
+      const newData = xhr.responseText.substring(lastProcessed);
+      lastProcessed = xhr.responseText.length;
+
+      const lines = newData.split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) {
+            reject(new Error(parsed.error));
+            return;
+          }
+          if (parsed.text && onChunk) {
+            fullResponse += parsed.text;
+            onChunk(parsed.text);
+          }
+        } catch {
+          // Unvollständige JSON-Zeile, ignorieren
         }
       }
-      return fullResponse;
-    } else {
-      // Normaler Modus
-      const response = await client.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 1024,
-        system: trainer.systemPrompt,
-        messages,
-      });
+    };
 
-      return response.content[0].type === 'text' ? response.content[0].text : '';
-    }
-  } catch (error) {
-    console.error('Claude API Fehler:', error);
-    throw new Error('Verbindung zum Hundetrainer fehlgeschlagen. Bitte versuche es erneut.');
-  }
+    xhr.onload = () => resolve(fullResponse);
+    xhr.onerror = () =>
+      reject(new Error('Verbindung zum Server fehlgeschlagen. Bitte prüfe deine Internetverbindung.'));
+    xhr.ontimeout = () =>
+      reject(new Error('Zeitüberschreitung. Bitte versuche es erneut.'));
+    xhr.timeout = 60000;
+
+    xhr.send(JSON.stringify({ message: userMessage, history }));
+  });
 };
