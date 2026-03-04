@@ -1,10 +1,14 @@
 import { Router, Request, Response } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
+import twilio from 'twilio';
 import { addKnowledgeEntry, getKnowledge, deleteKnowledgeEntry } from './knowledge';
 import { getTrainer, saveSystemPrompt } from './trainers';
 
 const router = Router();
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// Twilio Webhook-Signatur prüfen (wenn Auth Token konfiguriert)
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 
 // Erlaubte Handynummer(n) – nur du darfst Wissen einspeisen
 const ALLOWED_NUMBERS = (process.env.WHATSAPP_ALLOWED_NUMBERS || '')
@@ -103,6 +107,18 @@ Schreibe NUR den fertigen System Prompt. Beginne direkt mit "Du bist ${trainer.n
 
 // POST /webhook/whatsapp – Twilio schickt eingehende Nachrichten hierher
 router.post('/whatsapp', async (req: Request, res: Response) => {
+  // Twilio Signatur-Validierung (wenn Auth Token konfiguriert)
+  if (TWILIO_AUTH_TOKEN) {
+    const signature = req.headers['x-twilio-signature'] as string || '';
+    const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    const isValid = twilio.validateRequest(TWILIO_AUTH_TOKEN, signature, url, req.body);
+    if (!isValid) {
+      console.warn('Ungültige Twilio-Signatur abgewiesen');
+      res.status(403).send('Forbidden');
+      return;
+    }
+  }
+
   const from = req.body.From || '';   // z.B. "whatsapp:+491234567890"
   const body = (req.body.Body || '').trim();
 

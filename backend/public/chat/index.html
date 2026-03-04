@@ -35,7 +35,7 @@
     .topbar-info .topbar-name { font-size: 16px; font-weight: 700; color: #fff; }
     .topbar-info .topbar-sub { font-size: 12px; color: #8e8ea0; }
     .topbar-status {
-      margin-left: auto; display: flex; align-items: center; gap: 6px;
+      display: flex; align-items: center; gap: 6px;
       font-size: 12px; color: #10a37f;
     }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10a37f; }
@@ -143,6 +143,56 @@
     .send-btn svg { width: 16px; height: 16px; fill: #fff; }
     .input-hint { text-align: center; font-size: 11px; color: #6e6e80; margin-top: 8px; }
 
+    /* Rating row */
+    .rating-row {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-top: 8px;
+      padding-left: 0;
+    }
+    .rating-row .star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: #6e6e80;
+      padding: 2px;
+      transition: color 0.15s, transform 0.15s;
+      line-height: 1;
+    }
+    .rating-row .star-btn:hover,
+    .rating-row .star-btn.hovered {
+      color: #f5c542;
+      transform: scale(1.15);
+    }
+    .rating-row .star-btn.filled {
+      color: #f5c542;
+    }
+    .rating-thanks {
+      font-size: 13px;
+      color: #8e8ea0;
+      margin-top: 8px;
+    }
+
+    /* New Chat button */
+    .new-chat-btn {
+      margin-left: auto;
+      background: none;
+      border: 1px solid #3f3f3f;
+      border-radius: 8px;
+      color: #8e8ea0;
+      font-size: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .new-chat-btn:hover {
+      border-color: #10a37f;
+      color: #10a37f;
+    }
+
     /* Scrollbar */
     .chat-area::-webkit-scrollbar { width: 6px; }
     .chat-area::-webkit-scrollbar-track { background: transparent; }
@@ -157,6 +207,7 @@
     <div class="topbar-name" id="topbarName">PawCoach</div>
     <div class="topbar-sub" id="topbarSub">KI-Hundetrainer</div>
   </div>
+  <button class="new-chat-btn" id="newChatBtn" onclick="startNewChat()" title="Neuer Chat">Neuer Chat</button>
   <div class="topbar-status">
     <div class="status-dot"></div>
     Online
@@ -189,9 +240,111 @@
 </div>
 
 <script>
+  const STORAGE_KEY = 'pawcoach_chat';
+  const MAX_MESSAGES = 40; // 20 exchanges
+
   let trainer = null;
   let history = [];
+  let messages = []; // {role, content, chatId?}
   let isLoading = false;
+
+  // --- localStorage helpers ---
+  function saveToStorage() {
+    const data = { messages: messages.slice(-MAX_MESSAGES), history: history.slice(-MAX_MESSAGES) };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+  }
+  function loadFromStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  }
+  function clearStorage() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  }
+
+  // --- Restore chat history on load ---
+  function restoreChat() {
+    const saved = loadFromStorage();
+    if (!saved || !saved.messages || saved.messages.length === 0) return;
+    messages = saved.messages;
+    history = saved.history || [];
+    document.getElementById('welcomeScreen').style.display = 'none';
+    document.getElementById('messageList').style.display = 'block';
+    const list = document.getElementById('messageList');
+    list.innerHTML = '';
+    for (const msg of messages) {
+      const contentEl = appendMessage(msg.role, '', true);
+      contentEl.textContent = msg.content;
+      // Show rated state if already rated
+      if (msg.role === 'assistant' && msg.rated) {
+        const msgBody = contentEl.closest('.message-body');
+        showRatingThanks(msgBody, msg.rated);
+      }
+      // Show unrated rating row for assistant messages with chatId that were not rated
+      if (msg.role === 'assistant' && msg.chatId && !msg.rated) {
+        const msgBody = contentEl.closest('.message-body');
+        addRatingRow(msgBody, msg.chatId);
+      }
+    }
+    scrollDown();
+  }
+
+  // --- New Chat ---
+  function startNewChat() {
+    clearStorage();
+    messages = [];
+    history = [];
+    document.getElementById('messageList').innerHTML = '';
+    document.getElementById('messageList').style.display = 'none';
+    document.getElementById('welcomeScreen').style.display = 'flex';
+  }
+
+  // --- Rating ---
+  function addRatingRow(msgBody, chatId) {
+    const row = document.createElement('div');
+    row.className = 'rating-row';
+    for (let i = 1; i <= 5; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'star-btn';
+      btn.textContent = '\u2606'; // ☆
+      btn.dataset.value = i;
+      btn.addEventListener('mouseenter', () => {
+        row.querySelectorAll('.star-btn').forEach(s => {
+          s.classList.toggle('hovered', parseInt(s.dataset.value) <= i);
+        });
+      });
+      btn.addEventListener('mouseleave', () => {
+        row.querySelectorAll('.star-btn').forEach(s => s.classList.remove('hovered'));
+      });
+      btn.addEventListener('click', () => submitRating(chatId, i, row, msgBody));
+      row.appendChild(btn);
+    }
+    msgBody.appendChild(row);
+  }
+
+  function submitRating(chatId, rating, row, msgBody) {
+    // Immediately show thanks
+    row.remove();
+    showRatingThanks(msgBody, rating);
+    // Update stored message
+    const msg = messages.find(m => m.chatId === chatId);
+    if (msg) { msg.rated = rating; saveToStorage(); }
+    // Send to backend
+    fetch('/api/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId, rating }),
+    }).catch(() => {}); // silent fail
+  }
+
+  function showRatingThanks(msgBody, rating) {
+    const thanks = document.createElement('div');
+    thanks.className = 'rating-thanks';
+    thanks.textContent = 'Danke f\u00fcr dein Feedback! ' + '\u2605'.repeat(rating) + '\u2606'.repeat(5 - rating);
+    msgBody.appendChild(thanks);
+  }
 
   // Trainer-Info laden
   fetch('/api/trainer')
@@ -205,6 +358,12 @@
       document.getElementById('welcomeName').textContent = t.name;
       document.getElementById('welcomeSub').textContent =
         `Hallo! Ich bin ${t.name}. Stell mir deine Fragen rund um Hundeerziehung!`;
+      // Restore chat after trainer info is loaded (so avatars render correctly)
+      restoreChat();
+    })
+    .catch(() => {
+      // Still restore even if trainer fetch fails
+      restoreChat();
     });
 
   function suggest(btn) {
@@ -224,10 +383,12 @@
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
 
-  function appendMessage(role, content) {
+  function appendMessage(role, content, isRestore) {
     const list = document.getElementById('messageList');
-    document.getElementById('welcomeScreen').style.display = 'none';
-    list.style.display = 'block';
+    if (!isRestore) {
+      document.getElementById('welcomeScreen').style.display = 'none';
+      list.style.display = 'block';
+    }
 
     const div = document.createElement('div');
     div.className = `message ${role}`;
@@ -238,7 +399,7 @@
         <div class="message-content"></div>
       </div>`;
     list.appendChild(div);
-    scrollDown();
+    if (!isRestore) scrollDown();
     return div.querySelector('.message-content');
   }
 
@@ -257,12 +418,14 @@
     document.getElementById('sendBtn').disabled = true;
 
     appendMessage('user', text);
+    messages.push({ role: 'user', content: text });
     history.push({ role: 'user', content: text });
 
     const contentEl = appendMessage('assistant', '');
     contentEl.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
 
     let fullText = '';
+    let chatId = null;
     let firstChunk = true;
 
     try {
@@ -284,11 +447,17 @@
           const data = line.slice(6);
           if (data === '[DONE]') break;
           try {
-            const { text: chunk } = JSON.parse(data);
-            if (firstChunk) { contentEl.textContent = ''; firstChunk = false; }
-            fullText += chunk;
-            contentEl.textContent = fullText;
-            scrollDown();
+            const parsed = JSON.parse(data);
+            // Capture chatId from the stream
+            if (parsed.chatId) {
+              chatId = parsed.chatId;
+            }
+            if (parsed.text) {
+              if (firstChunk) { contentEl.textContent = ''; firstChunk = false; }
+              fullText += parsed.text;
+              contentEl.textContent = fullText;
+              scrollDown();
+            }
           } catch {}
         }
       }
@@ -296,7 +465,24 @@
       contentEl.textContent = 'Verbindungsfehler. Bitte versuche es erneut.';
     }
 
+    // Store assistant message with chatId
+    const assistantMsg = { role: 'assistant', content: fullText };
+    if (chatId) assistantMsg.chatId = chatId;
+    messages.push(assistantMsg);
     history.push({ role: 'assistant', content: fullText });
+
+    // Trim to max messages
+    if (messages.length > MAX_MESSAGES) messages = messages.slice(-MAX_MESSAGES);
+    if (history.length > MAX_MESSAGES) history = history.slice(-MAX_MESSAGES);
+
+    saveToStorage();
+
+    // Add rating row if we have a chatId
+    if (chatId && fullText) {
+      const msgBody = contentEl.closest('.message-body');
+      addRatingRow(msgBody, chatId);
+    }
+
     isLoading = false;
     document.getElementById('sendBtn').disabled = false;
     textarea.focus();

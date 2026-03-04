@@ -4,6 +4,8 @@ export interface Message {
   content: string;
   timestamp: Date;
   trainerName?: string;
+  chatId?: number;
+  rating?: number;
 }
 
 export interface Trainer {

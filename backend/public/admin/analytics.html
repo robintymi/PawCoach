@@ -34,34 +34,130 @@
     .loading { text-align: center; padding: 40px; color: #888; }
     .refresh-btn { background: #8B4513; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
     .refresh-btn:hover { background: #A0522D; }
+
+    /* Time Range Filter */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .toolbar-group {
+      display: flex;
+      gap: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #d4c4b0;
+    }
+    .range-btn {
+      background: white;
+      color: #8B4513;
+      border: none;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.85em;
+      font-weight: 500;
+      transition: all 0.15s;
+      border-right: 1px solid #d4c4b0;
+    }
+    .range-btn:last-child { border-right: none; }
+    .range-btn:hover { background: #f5ebe0; }
+    .range-btn.active { background: #8B4513; color: white; }
+    .csv-btn {
+      background: white;
+      color: #8B4513;
+      border: 1px solid #8B4513;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85em;
+      font-weight: 500;
+      transition: all 0.15s;
+      margin-left: auto;
+    }
+    .csv-btn:hover { background: #8B4513; color: white; }
   </style>
 </head>
 <body>
   <div class="nav">
-    <a href="/admin/dashboard.html">Dashboard</a>
-    <a href="/admin/analytics.html"><strong>Analytics</strong></a>
-    <a href="/admin/prompt-builder.html">System Prompt</a>
+    <a href="/admin/dashboard">Dashboard</a>
+    <a href="/admin/analytics"><strong>Analytics</strong></a>
+    <a href="/admin/prompt-builder">System Prompt</a>
   </div>
 
   <h1>PawCoach Analytics</h1>
-  <button class="refresh-btn" onclick="loadAnalytics()">Aktualisieren</button>
+
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <button class="range-btn" data-days="7" onclick="setTimeRange(7, this)">7 Tage</button>
+      <button class="range-btn" data-days="14" onclick="setTimeRange(14, this)">14 Tage</button>
+      <button class="range-btn active" data-days="30" onclick="setTimeRange(30, this)">30 Tage</button>
+      <button class="range-btn" data-days="" onclick="setTimeRange(null, this)">Alle</button>
+    </div>
+    <button class="refresh-btn" onclick="loadAnalytics()">Aktualisieren</button>
+    <button class="csv-btn" onclick="exportCSV()">CSV Export</button>
+  </div>
 
   <div id="content">
     <div class="loading">Lade Analytics...</div>
   </div>
 
   <script>
+    let currentDays = 30;
+    let lastRecentQuestions = [];
+
+    function setTimeRange(days, btn) {
+      currentDays = days;
+      // Update active state on buttons
+      document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadAnalytics();
+    }
+
     async function loadAnalytics() {
       const el = document.getElementById('content');
       el.innerHTML = '<div class="loading">Lade...</div>';
 
       try {
-        const res = await fetch('/api/analytics/summary');
+        let url = '/api/analytics/summary';
+        if (currentDays) {
+          url += '?days=' + currentDays;
+        }
+        const res = await fetch(url);
         const data = await res.json();
         renderAnalytics(data);
       } catch (e) {
         el.innerHTML = '<div class="card"><p>Analytics noch nicht verfügbar. Stelle sicher, dass die <code>chat_analytics</code> Tabelle in Supabase erstellt wurde.</p></div>';
       }
+    }
+
+    function exportCSV() {
+      if (!lastRecentQuestions || lastRecentQuestions.length === 0) {
+        alert('Keine Daten zum Exportieren vorhanden.');
+        return;
+      }
+
+      const header = ['Datum', 'Frage', 'Bewertung', 'Quelle'];
+      const rows = lastRecentQuestions.map(q => {
+        const date = new Date(q.created_at).toLocaleDateString('de-DE');
+        const question = '"' + (q.user_question || '').replace(/"/g, '""') + '"';
+        const rating = q.rating ? q.rating.toString() : '-';
+        const source = q.source || '-';
+        return [date, question, rating, source].join(';');
+      });
+
+      const csvContent = '\uFEFF' + header.join(';') + '\n' + rows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.download = 'pawcoach-fragen-' + dateStr + '.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
 
     function renderStars(rating) {
@@ -75,6 +171,7 @@
 
     function renderAnalytics(data) {
       const { overview, recentQuestions, lowRatedChats, dailyStats, categoryUsage } = data;
+      lastRecentQuestions = recentQuestions || [];
 
       let html = '';
 

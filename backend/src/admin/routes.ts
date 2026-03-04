@@ -25,6 +25,11 @@ router.get('/prompt-builder', requireAuth, (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../../public/admin/prompt-builder.html'));
 });
 
+// Analytics (geschützt)
+router.get('/analytics', requireAuth, (req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../../public/admin/analytics.html'));
+});
+
 // Trainer API
 router.get('/api/trainer', requireAuth, async (req: Request, res: Response) => {
   const t = await getTrainer();

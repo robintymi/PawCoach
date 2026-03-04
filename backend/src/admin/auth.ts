@@ -10,6 +10,8 @@ declare module 'express-session' {
 export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
   if (req.session?.adminLoggedIn) {
     next();
+  } else if (req.path.startsWith('/api/') || req.headers.accept?.includes('application/json')) {
+    res.status(401).json({ error: 'Nicht autorisiert' });
   } else {
     res.redirect('/admin/login');
   }

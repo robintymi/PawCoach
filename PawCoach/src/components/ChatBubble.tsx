@@ -1,21 +1,30 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Message } from '../types';
+import StarRating from './StarRating';
 
 interface ChatBubbleProps {
   message: Message;
   trainerAvatar?: string;
   trainerName?: string;
+  showRating?: boolean;
+  onRate?: (rating: number) => void;
 }
 
-const ChatBubble: React.FC<ChatBubbleProps> = ({ message, trainerAvatar, trainerName }) => {
+const ChatBubble: React.FC<ChatBubbleProps> = ({
+  message,
+  trainerAvatar,
+  trainerName,
+  showRating,
+  onRate,
+}) => {
   const isUser = message.role === 'user';
 
   return (
     <View style={[styles.container, isUser ? styles.userContainer : styles.assistantContainer]}>
       {!isUser && (
         <View style={styles.trainerHeader}>
-          <Text style={styles.avatar}>{trainerAvatar || '🐕'}</Text>
+          <Text style={styles.avatar}>{trainerAvatar || '\uD83D\uDC15'}</Text>
           <Text style={styles.trainerName}>{trainerName || 'Trainer'}</Text>
         </View>
       )}
@@ -27,6 +36,12 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ message, trainerAvatar, trainer
       <Text style={styles.timestamp}>
         {message.timestamp.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
       </Text>
+      {showRating && !isUser && message.content.length > 0 && onRate && (
+        <StarRating
+          onRate={onRate}
+          currentRating={message.rating}
+        />
+      )}
     </View>
   );
 };
