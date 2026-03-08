@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Message, Trainer } from '../types';
 import { TRAINER, fetchTrainer, getWelcomeMessage } from '../constants/trainers';
-import { sendMessageToClaude, submitRating } from '../services/claudeApi';
+import { sendMessageToClaude, submitRating, getUsage, UsageInfo } from '../services/claudeApi';
 import { saveMessages, loadMessages, clearMessages } from '../services/chatStorage';
 import ChatBubble from '../components/ChatBubble';
 import TypingIndicator from '../components/TypingIndicator';
@@ -27,6 +27,7 @@ const ChatScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
   const flatListRef = useRef<FlatList>(null);
   // Track which message IDs have finished streaming and should show rating
   const [completedMessageIds, setCompletedMessageIds] = useState<Set<string>>(new Set());
@@ -37,6 +38,8 @@ const ChatScreen: React.FC = () => {
       const saved = await loadMessages();
       const loadedTrainer = await fetchTrainer();
       setTrainer(loadedTrainer);
+      const usageInfo = await getUsage();
+      setUsage(usageInfo);
 
       if (saved && saved.length > 0) {
         setMessages(saved);
@@ -113,6 +116,8 @@ const ChatScreen: React.FC = () => {
       });
 
       setCompletedMessageIds(prev => new Set(prev).add(assistantMessageId));
+      const usageInfo = await getUsage();
+      setUsage(usageInfo);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unbekannter Fehler';
       setMessages(prev => {
@@ -170,7 +175,8 @@ const ChatScreen: React.FC = () => {
     setIsOffline(!connected);
   }, []);
 
-  const isSendDisabled = !inputText.trim() || isLoading || isOffline;
+  const isLimitReached = usage !== null && usage.remaining <= 0;
+  const isSendDisabled = !inputText.trim() || isLoading || isOffline || isLimitReached;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -191,6 +197,15 @@ const ChatScreen: React.FC = () => {
       </View>
 
       <OfflineBanner onConnectivityChange={handleConnectivityChange} />
+      {usage && (
+        <View style={[styles.usageBanner, usage.remaining <= 0 && styles.usageBannerWarning]}>
+          <Text style={styles.usageText}>
+            {usage.remaining <= 0
+              ? 'Tägliches Fragelimit erreicht – morgen geht es weiter!'
+              : `${usage.used}/${usage.limit} Fragen heute genutzt`}
+          </Text>
+        </View>
+      )}
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -227,7 +242,7 @@ const ChatScreen: React.FC = () => {
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
-            placeholder={isOffline ? 'Offline - keine Verbindung' : `Frage ${trainer.name}\u2026`}
+            placeholder={isOffline ? 'Offline - keine Verbindung' : isLimitReached ? 'Tägliches Limit erreicht' : `Frage ${trainer.name}\u2026`}
             placeholderTextColor="#A1887F"
             multiline
             maxLength={500}
@@ -275,6 +290,19 @@ const styles = StyleSheet.create({
   settingsIcon: {
     fontSize: 24,
     color: '#BCAAA4',
+  },
+  usageBanner: {
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  usageBannerWarning: {
+    backgroundColor: '#FFF3E0',
+  },
+  usageText: {
+    fontSize: 12,
+    color: '#5D4037',
   },
   messageList: { paddingVertical: 12 },
   inputContainer: {

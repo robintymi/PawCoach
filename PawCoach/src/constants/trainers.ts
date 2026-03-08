@@ -4,8 +4,8 @@ import { API_BASE_URL } from '../config';
 // Fallback bis Trainer-Profil vom Backend geladen ist
 const DEFAULT_TRAINER: Trainer = {
   id: 'trainer',
-  name: 'PawCoach',
-  specialty: 'Hundeerziehung',
+  name: 'Robin Erike',
+  specialty: 'Robins Hundeschule',
   avatar: '🐕',
   systemPrompt: '',
 };

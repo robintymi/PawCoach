@@ -56,7 +56,13 @@ export const sendMessageToClaude = async (
       }
     };
 
-    xhr.onload = () => resolve({ text: fullResponse, chatId });
+    xhr.onload = () => {
+      if (xhr.status === 429) {
+        reject(new Error('Du hast dein tägliches Fragelimit erreicht. Morgen kannst du wieder Fragen stellen!'));
+        return;
+      }
+      resolve({ text: fullResponse, chatId });
+    };
     xhr.onerror = () =>
       reject(new Error('Verbindung zum Server fehlgeschlagen. Bitte prüfe deine Internetverbindung.'));
     xhr.ontimeout = () =>
@@ -65,6 +71,23 @@ export const sendMessageToClaude = async (
 
     xhr.send(JSON.stringify({ message: userMessage, history }));
   });
+};
+
+// Free-Tier: Nutzung abfragen
+export interface UsageInfo {
+  used: number;
+  limit: number;
+  remaining: number;
+}
+
+export const getUsage = async (): Promise<UsageInfo> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/usage`);
+    if (!res.ok) return { used: 0, limit: 3, remaining: 3 };
+    return await res.json();
+  } catch {
+    return { used: 0, limit: 3, remaining: 3 };
+  }
 };
 
 export const submitRating = async (chatId: number, rating: number): Promise<void> => {

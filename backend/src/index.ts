@@ -11,7 +11,7 @@ import { getTrainer } from './trainers';
 import { buildKnowledgePrompt } from './knowledge';
 import adminRouter from './admin/routes';
 import whatsappRouter from './whatsapp';
-import { logChat, rateChat, getAnalyticsSummary, getTopQuestions, getLowRatedChats } from './analytics';
+import { logChat, rateChat, getAnalyticsSummary, getTopQuestions, getLowRatedChats, getUsageToday } from './analytics';
 import { requireAuth } from './admin/auth';
 
 const app = express();
@@ -79,12 +79,30 @@ app.get('/api/trainer', async (req, res) => {
   res.json({ id, name, specialty, avatar });
 });
 
-// Chat-Endpunkt mit SSE-Streaming + Rate-Limiting
+// Nutzungs-Status abfragen (fuer Frontend Anzeige)
+app.get('/api/usage', async (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const usage = await getUsageToday(ip);
+  res.json(usage);
+});
+
+// Chat-Endpunkt mit SSE-Streaming + Rate-Limiting + Free-Tier
 app.post('/api/chat', chatLimiter, async (req, res) => {
   const { message, history } = req.body;
 
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ error: 'message ist erforderlich' });
+  }
+
+  // Free-Tier Limit pruefen
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const usage = await getUsageToday(ip);
+  if (usage.remaining <= 0) {
+    return res.status(429).json({
+      error: 'limit_reached',
+      message: `Du hast heute dein Limit von ${usage.limit} kostenlosen Fragen erreicht. Morgen kannst du wieder fragen!`,
+      usage,
+    });
   }
 
   // Input-Länge begrenzen
@@ -130,9 +148,9 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 
     clearTimeout(timeout);
 
-    // Analytics: Chat-Interaktion loggen
+    // Analytics: Chat-Interaktion loggen (mit IP fuer Free-Tier Tracking)
     const source = (req.headers['x-source'] as 'app' | 'web' | 'whatsapp') || 'web';
-    logChat(safeMessage, fullResponse, [], source).then(chatId => {
+    logChat(safeMessage, fullResponse, [], source, ip).then(chatId => {
       if (chatId) {
         res.write(`data: ${JSON.stringify({ chatId })}\n\n`);
       }

@@ -10,8 +10,8 @@ export interface Trainer {
 
 const TRAINER_BASE = {
   id: 'trainer',
-  name: 'Dein Hundetrainer',
-  specialty: 'Hundeerziehung',
+  name: 'Robin Erike',
+  specialty: 'Robins Hundeschule',
   avatar: '🐕',
 };
 

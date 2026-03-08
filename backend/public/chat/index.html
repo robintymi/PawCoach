@@ -247,6 +247,35 @@
   let history = [];
   let messages = []; // {role, content, chatId?}
   let isLoading = false;
+  let usageInfo = null; // {used, limit, remaining}
+
+  // --- Free-Tier Usage ---
+  async function checkUsage() {
+    try {
+      const res = await fetch('/api/usage');
+      usageInfo = await res.json();
+      updateUsageDisplay();
+    } catch {}
+  }
+  function updateUsageDisplay() {
+    let el = document.getElementById('usageBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'usageBanner';
+      el.style.cssText = 'text-align:center;font-size:12px;color:#8e8ea0;padding:6px;background:#2a2a2a;';
+      document.querySelector('.input-area').prepend(el);
+    }
+    if (!usageInfo) return;
+    if (usageInfo.remaining <= 0) {
+      el.style.color = '#f5c542';
+      el.innerHTML = 'Tageslimit erreicht (' + usageInfo.limit + '/' + usageInfo.limit + '). Morgen wieder verfuegbar!';
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('msgInput').placeholder = 'Tageslimit erreicht...';
+    } else {
+      el.textContent = usageInfo.used + '/' + usageInfo.limit + ' Fragen heute genutzt';
+    }
+  }
+  checkUsage();
 
   // --- localStorage helpers ---
   function saveToStorage() {
@@ -435,6 +464,16 @@
         body: JSON.stringify({ message: text, history: history.slice(-10) }),
       });
 
+      // Free-Tier Limit erreicht
+      if (response.status === 429) {
+        const err = await response.json();
+        contentEl.textContent = err.message || 'Tageslimit erreicht. Morgen wieder verfuegbar!';
+        isLoading = false;
+        document.getElementById('sendBtn').disabled = true;
+        checkUsage();
+        return;
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
@@ -486,6 +525,7 @@
     isLoading = false;
     document.getElementById('sendBtn').disabled = false;
     textarea.focus();
+    checkUsage(); // Usage-Counter aktualisieren
   }
 </script>
 </body>

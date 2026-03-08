@@ -21,17 +21,21 @@ export const logChat = async (
   userQuestion: string,
   assistantResponse: string,
   categoriesUsed: string[],
-  source: 'app' | 'web' | 'whatsapp' = 'web'
+  source: 'app' | 'web' | 'whatsapp' = 'web',
+  ipAddress?: string
 ): Promise<number | null> => {
+  const insertData: Record<string, unknown> = {
+    user_question: userQuestion.substring(0, 2000),
+    assistant_response: assistantResponse.substring(0, 5000),
+    categories_used: categoriesUsed,
+    response_length: assistantResponse.length,
+    source,
+  };
+  if (ipAddress) insertData.ip_address = ipAddress;
+
   const { data, error } = await supabase
     .from('chat_analytics')
-    .insert({
-      user_question: userQuestion.substring(0, 2000),
-      assistant_response: assistantResponse.substring(0, 5000),
-      categories_used: categoriesUsed,
-      response_length: assistantResponse.length,
-      source,
-    })
+    .insert(insertData)
     .select('id')
     .single();
 
@@ -172,6 +176,22 @@ export const getCategoryUsage = async (): Promise<Record<string, number>> => {
     }
   }
   return counts;
+};
+
+// Free-Tier: Zaehlt Fragen pro IP heute
+export const getUsageToday = async (ipAddress: string): Promise<{ used: number; limit: number; remaining: number }> => {
+  const limit = parseInt(process.env.FREE_DAILY_LIMIT || '3');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const { count, error } = await supabase
+    .from('chat_analytics')
+    .select('*', { count: 'exact', head: true })
+    .eq('ip_address', ipAddress)
+    .gte('created_at', today.toISOString());
+
+  const used = error ? 0 : (count || 0);
+  return { used, limit, remaining: Math.max(0, limit - used) };
 };
 
 // Gesamtübersicht für Admin-Dashboard
